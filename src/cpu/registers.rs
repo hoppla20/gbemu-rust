@@ -13,6 +13,7 @@ pub enum Register {
     E,
     H,
     L,
+    Z,
 }
 
 #[derive(Clone, Copy)]
@@ -33,6 +34,7 @@ pub struct Registers {
     pub(super) e: u8,
     pub(super) h: u8,
     pub(super) l: u8,
+    pub(super) z: u8,
 }
 
 impl Registers {
@@ -46,6 +48,7 @@ impl Registers {
             Register::E => self.e,
             Register::H => self.h,
             Register::L => self.l,
+            Register::Z => self.z,
         }
     }
     pub(super) fn set_register(&mut self, reg: Register, value: u8) {
@@ -58,6 +61,7 @@ impl Registers {
             Register::E => self.e = value,
             Register::H => self.h = value,
             Register::L => self.l = value,
+            Register::Z => self.z = value,
         }
     }
 
@@ -116,6 +120,8 @@ impl Registers {
     pub(super) fn set_flag_zero(&mut self, on: bool) {
         if on {
             self.f |= 1 << FLAG_ZERO_BYTE_POS;
+        } else {
+            self.f &= !(1 << FLAG_ZERO_BYTE_POS);
         }
     }
     pub(super) fn get_flag_subtraction(&self) -> bool {
@@ -124,6 +130,8 @@ impl Registers {
     pub(super) fn set_flag_subtraction(&mut self, on: bool) {
         if on {
             self.f |= 1 << FLAG_SUBTRACTION_BYTE_POS;
+        } else {
+            self.f &= !(1 << FLAG_SUBTRACTION_BYTE_POS);
         }
     }
     pub(super) fn get_flag_half_carry(&self) -> bool {
@@ -132,6 +140,8 @@ impl Registers {
     pub(super) fn set_flag_half_carry(&mut self, on: bool) {
         if on {
             self.f |= 1 << FLAG_HALF_CARRY_BYTE_POS;
+        } else {
+            self.f &= !(1 << FLAG_HALF_CARRY_BYTE_POS);
         }
     }
     pub(super) fn get_flag_carry(&self) -> bool {
@@ -140,6 +150,8 @@ impl Registers {
     pub(super) fn set_flag_carry(&mut self, on: bool) {
         if on {
             self.f |= 1 << FLAG_CARRY_BYTE_POS;
+        } else {
+            self.f &= !(1 << FLAG_CARRY_BYTE_POS);
         }
     }
 }
