@@ -46,12 +46,12 @@ jobs:
       group: coverage-${{ github.ref }}
 
     steps:
+      - uses: actions/checkout@v4
+
       # install requirements and run tests only when needed
       - uses: taiki-e/install-action@cargo-llvm-cov
         if: ${{ github.event_name == 'push' || github.event.action != 'closed' }}
       - uses: taiki-e/install-action@nextest
-        if: ${{ github.event_name == 'push' || github.event.action != 'closed' }}
-      - uses: actions/checkout@v4
         if: ${{ github.event_name == 'push' || github.event.action != 'closed' }}
       - name: Run tests and generate coverage
         if: ${{ github.event_name == 'push' || github.event.action != 'closed' }}
