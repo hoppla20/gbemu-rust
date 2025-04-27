@@ -95,7 +95,7 @@ jobs:
       group: pages-${{ github.ref }}
 
     # only on the main branch and if no previous jobs failed
-    if: ${{ github.ref == 'refs/heads/main' && !contains(needs.*.result, 'failure') }}
+    if: ${{ github.ref == 'refs/heads/main' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -129,7 +129,7 @@ jobs:
       group: review-${{ github.ref }}
 
     # only on PR branches and if no previous jobs failed
-    if: ${{ github.head_ref != '' && !contains(needs.*.result, 'failure') }}
+    if: ${{ always() && github.head_ref != '' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
 
     steps:
       - uses: actions/checkout@v4
