@@ -69,21 +69,39 @@ impl TryFrom<u8> for ArithmeticOperand16 {
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
-    NOP,
+    nop,
 
     // 8-bit arithmetics
-    add_a_r8 { operand: ArithmeticOperand },
-    adc_a_r8 { operand: ArithmeticOperand },
-    sub_a_r8 { operand: ArithmeticOperand },
-    sbc_a_r8 { operand: ArithmeticOperand },
-    and_a_r8 { operand: ArithmeticOperand },
-    xor_a_r8 { operand: ArithmeticOperand },
-    or_a_r8 { operand: ArithmeticOperand },
-    cp_a_r8 { operand: ArithmeticOperand },
-    inc_r8 { operand: ArithmeticOperand },
-    dec_r8 { operand: ArithmeticOperand },
-    inc_r16 { operand: ArithmeticOperand16 },
-    dec_r16 { operand: ArithmeticOperand16 },
+    add_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    adc_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    sub_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    sbc_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    and_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    xor_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    or_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    cp_a_r8 {
+        operand: ArithmeticOperand,
+    },
+    inc_r8 {
+        operand: ArithmeticOperand,
+    },
+    dec_r8 {
+        operand: ArithmeticOperand,
+    },
     cpl,
     daa,
 
@@ -98,7 +116,54 @@ pub enum Instruction {
     ccf,
 
     // 16-bit arithmetics
-    add_hl_r16 { operand: ArithmeticOperand16 },
+    inc_r16 {
+        operand: ArithmeticOperand16,
+    },
+    dec_r16 {
+        operand: ArithmeticOperand16,
+    },
+    add_hl_r16 {
+        operand: ArithmeticOperand16,
+    },
+
+    // prefix
+    prefix,
+    rlc_r8 {
+        operand: ArithmeticOperand,
+    },
+    rrc_r8 {
+        operand: ArithmeticOperand,
+    },
+    rl_r8 {
+        operand: ArithmeticOperand,
+    },
+    rr_r8 {
+        operand: ArithmeticOperand,
+    },
+    sla_r8 {
+        operand: ArithmeticOperand,
+    },
+    sra_r8 {
+        operand: ArithmeticOperand,
+    },
+    swap_r8 {
+        operand: ArithmeticOperand,
+    },
+    srl_r8 {
+        operand: ArithmeticOperand,
+    },
+    bit_b3_r8 {
+        index: u8,
+        operand: ArithmeticOperand,
+    },
+    res_b3_r8 {
+        index: u8,
+        operand: ArithmeticOperand,
+    },
+    set_b3_r8 {
+        index: u8,
+        operand: ArithmeticOperand,
+    },
 }
 
 #[derive(Debug)]
@@ -127,6 +192,31 @@ macro_rules! instr_a_r8_match {
     };
 }
 
+macro_rules! instr_r8_match {
+    ($self:ident, $operand:ident, $instr:ident, $mbc:ident) => {
+        match ($operand, $self.current_instruction_cycle) {
+            (ArithmeticOperand::IND_HL, 0) => {
+                $self.registers.z = $mbc.read_byte($self.registers.get_hl());
+                Ok(())
+            },
+            (ArithmeticOperand::IND_HL, 1) => {
+                $mbc.write_byte($self.registers.get_hl(), $self.registers.$instr($operand));
+                Ok(())
+            },
+            (ArithmeticOperand::IND_HL, 2) => {
+                $self.current_instruction_completed = true;
+                Ok(())
+            },
+            (_, 0) => {
+                $self.registers.$instr($operand);
+                $self.current_instruction_completed = true;
+                Ok(())
+            },
+            _ => panic_execuction!(),
+        }
+    };
+}
+
 macro_rules! arithmetic_operand_0_2 {
     ($opcode:ident) => {
         extract_bits!($opcode: u8, 0, 2).try_into()?
@@ -146,11 +236,94 @@ macro_rules! arithmetic_operand_16_4_5 {
 }
 
 impl Cpu {
-    pub fn decode_instruction(&self, mbc: &impl Mbc) -> Result<Instruction, ExecutionError> {
+    pub(super) fn decode_prefix_instruction(
+        &self,
+        mbc: &impl Mbc,
+    ) -> Result<Instruction, ExecutionError> {
+        let opcode = mbc.read_byte(self.registers.pc);
+
+        let mut result = Instruction::nop;
+
+        match extract_bits!(opcode: u8, 6, 7) {
+            0b00 => match extract_bits!(opcode: u8, 3, 5) {
+                0b000 => {
+                    result = Instruction::rlc_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                0b001 => {
+                    result = Instruction::rrc_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                0b010 => {
+                    result = Instruction::rl_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                0b011 => {
+                    result = Instruction::rr_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                0b100 => {
+                    result = Instruction::sla_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                0b101 => {
+                    result = Instruction::sra_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                0b110 => {
+                    result = Instruction::swap_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                0b111 => {
+                    result = Instruction::srl_r8 {
+                        operand: arithmetic_operand_0_2!(opcode),
+                    }
+                },
+                _ => {},
+            },
+            0b01 => {
+                result = Instruction::bit_b3_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                    index: extract_bits!(opcode: u8, 3, 5),
+                }
+            },
+            0b10 => {
+                result = Instruction::res_b3_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                    index: extract_bits!(opcode: u8, 3, 5),
+                }
+            },
+            0b11 => {
+                result = Instruction::set_b3_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                    index: extract_bits!(opcode: u8, 3, 5),
+                }
+            },
+            _ => {},
+        }
+
+        match result {
+            Instruction::nop => Err(ExecutionError::UnknownOpcode { opcode }),
+            _ => Ok(result),
+        }
+    }
+
+    pub(super) fn decode_instruction(&self, mbc: &impl Mbc) -> Result<Instruction, ExecutionError> {
         let opcode = mbc.read_byte(self.registers.pc);
 
         if opcode == 0x00 {
-            return Ok(Instruction::NOP);
+            return Ok(Instruction::nop);
+        }
+
+        if opcode == 0b11001011 {
+            return Ok(Instruction::prefix);
         }
 
         match extract_bits!(opcode: u8, 6, 7) {
@@ -217,9 +390,9 @@ impl Cpu {
         }
     }
 
-    fn instruction_step(&mut self, mbc: &impl Mbc) -> Result<(), ExecutionError> {
+    fn instruction_step(&mut self, mbc: &mut impl Mbc) -> Result<(), ExecutionError> {
         match self.current_instruction {
-            Instruction::NOP => {
+            Instruction::nop => {
                 self.current_instruction_completed = true;
                 Ok(())
             },
@@ -250,10 +423,10 @@ impl Cpu {
                 instr_a_r8_match!(self, operand, alu_cp_a_r8, mbc)
             },
             Instruction::inc_r8 { operand } => {
-                instr_a_r8_match!(self, operand, alu_inc_r8, mbc)
+                instr_r8_match!(self, operand, alu_inc_r8, mbc)
             },
             Instruction::dec_r8 { operand } => {
-                instr_a_r8_match!(self, operand, alu_dec_r8, mbc)
+                instr_r8_match!(self, operand, alu_dec_r8, mbc)
             },
 
             // 16-bit arithmetics
@@ -312,24 +485,114 @@ impl Cpu {
                 _ => panic_execuction!(),
             },
 
+            // prefix
+            Instruction::prefix => {
+                self.current_instruction_completed = true;
+                Ok(())
+            },
+            Instruction::rlc_r8 { operand } => instr_r8_match!(self, operand, alu_rlc_r8, mbc),
+            Instruction::rrc_r8 { operand } => instr_r8_match!(self, operand, alu_rrc_r8, mbc),
+            Instruction::sla_r8 { operand } => instr_r8_match!(self, operand, alu_sla_r8, mbc),
+            Instruction::sra_r8 { operand } => instr_r8_match!(self, operand, alu_sra_r8, mbc),
+            Instruction::swap_r8 { operand } => instr_r8_match!(self, operand, alu_swap_r8, mbc),
+            Instruction::srl_r8 { operand } => instr_r8_match!(self, operand, alu_srl_r8, mbc),
+            Instruction::bit_b3_r8 { index, operand } => {
+                match (operand, self.current_instruction_cycle) {
+                    (ArithmeticOperand::IND_HL, 0) => {
+                        self.registers.z = mbc.read_byte(self.registers.get_hl());
+                        Ok(())
+                    },
+                    (ArithmeticOperand::IND_HL, 1) => {
+                        self.registers.alu_bit_b3_r8(index, operand);
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    (_, 0) => {
+                        self.registers.alu_bit_b3_r8(index, operand);
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    _ => panic_execuction!(),
+                }
+            },
+            Instruction::res_b3_r8 { index, operand } => {
+                match (operand, self.current_instruction_cycle) {
+                    (ArithmeticOperand::IND_HL, 0) => {
+                        self.registers.z = mbc.read_byte(self.registers.get_hl());
+                        Ok(())
+                    },
+                    (ArithmeticOperand::IND_HL, 1) => {
+                        mbc.write_byte(
+                            self.registers.get_hl(),
+                            self.registers.alu_res_b3_r8(index, operand),
+                        );
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    (ArithmeticOperand::IND_HL, 2) => {
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    (_, 0) => {
+                        self.registers.alu_res_b3_r8(index, operand);
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    _ => panic_execuction!(),
+                }
+            },
+            Instruction::set_b3_r8 { index, operand } => {
+                match (operand, self.current_instruction_cycle) {
+                    (ArithmeticOperand::IND_HL, 0) => {
+                        self.registers.z = mbc.read_byte(self.registers.get_hl());
+                        Ok(())
+                    },
+                    (ArithmeticOperand::IND_HL, 1) => {
+                        mbc.write_byte(
+                            self.registers.get_hl(),
+                            self.registers.alu_set_b3_r8(index, operand),
+                        );
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    (ArithmeticOperand::IND_HL, 2) => {
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    (_, 0) => {
+                        self.registers.alu_set_b3_r8(index, operand);
+                        self.current_instruction_completed = true;
+                        Ok(())
+                    },
+                    _ => panic_execuction!(),
+                }
+            },
+
             _ => Err(ExecutionError::NoImpl {
                 instruction: self.current_instruction,
             }),
         }
     }
 
-    pub fn step(&mut self, mbc: &impl Mbc) -> Result<(), ExecutionError> {
+    pub fn step(&mut self, mbc: &mut impl Mbc) -> Result<bool, ExecutionError> {
         self.instruction_step(mbc)?;
 
         if self.current_instruction_completed {
             self.registers.pc += 1;
-            self.current_instruction = self.decode_instruction(mbc)?;
+            match self.current_instruction {
+                Instruction::prefix => {
+                    self.current_instruction = self.decode_prefix_instruction(mbc)?
+                },
+                _ => self.current_instruction = self.decode_instruction(mbc)?,
+            }
             self.current_instruction_completed = false;
             self.current_instruction_cycle = 0;
+
+            Ok(true)
         } else {
             self.current_instruction_cycle += 1;
-        }
 
-        Ok(())
+            Ok(false)
+        }
     }
 }

@@ -32,7 +32,7 @@ impl Registers {
             ArithmeticOperand::H => self.h = value,
             ArithmeticOperand::L => self.l = value,
             ArithmeticOperand::IND_HL => {
-                panic!("Arithmetic operations are not allowed to write into register Z!")
+                panic!("Writing into register Z is not allowed with this function!")
             },
             ArithmeticOperand::A => self.a = value,
         }
@@ -155,163 +155,233 @@ impl Registers {
         self.set_flag_carry(false);
     }
 
-    pub fn alu_inc_r8(&mut self, operand: ArithmeticOperand) {
-        let (temp, _) = self.get_arithmetic_target_r8(operand).overflowing_add(1);
-        self.set_flag_zero(temp == 0);
+    pub fn alu_inc_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let (result, _) = self.get_arithmetic_target_r8(operand).overflowing_add(1);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(half_carry_add_r8(self.get_arithmetic_target_r8(operand), 1));
-        self.set_arithmetic_target_r8(operand, temp);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_dec_r8(&mut self, operand: ArithmeticOperand) {
-        let (temp, _) = self.get_arithmetic_target_r8(operand).overflowing_sub(1);
-        self.set_flag_zero(temp == 0);
+    pub fn alu_dec_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let (result, _) = self.get_arithmetic_target_r8(operand).overflowing_sub(1);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(true);
         self.set_flag_half_carry(half_carry_sub_r8(self.get_arithmetic_target_r8(operand), 1));
-        self.set_arithmetic_target_r8(operand, temp);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_swap_a_r8(&mut self, operand: ArithmeticOperand) {
-        self.set_arithmetic_target_r8(
-            operand,
-            (self.get_arithmetic_target_r8(operand) >> 4)
-                | (self.get_arithmetic_target_r8(operand) << 4),
-        );
-        self.set_flag_zero(self.get_arithmetic_target_r8(operand) == 0);
+    pub fn alu_swap_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = (self.get_arithmetic_target_r8(operand) >> 4)
+            | (self.get_arithmetic_target_r8(operand) << 4);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(false);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    // rotation
-
-    pub fn alu_rra_a_r8(&mut self) {
-        self.alu_rr_a_r8(ArithmeticOperand::A);
-    }
-
-    pub fn alu_rrca_a_r8(&mut self) {
-        self.alu_rrc_a_r8(ArithmeticOperand::A);
-    }
-
-    pub fn alu_srl_a_r8(&mut self) {
-        self.alu_sra_a_r8(ArithmeticOperand::A);
-    }
-
-    pub fn alu_rla_a_r8(&mut self) {
-        self.alu_rl_a_r8(ArithmeticOperand::A);
-    }
-
-    pub fn alu_rlca_a_r8(&mut self) {
-        self.alu_rlc_a_r8(ArithmeticOperand::A);
-    }
-
-    pub fn alu_cpl_a_r8(&mut self) {
+    pub fn alu_cpl_a(&mut self) {
         self.set_flag_subtraction(true);
         self.set_flag_half_carry(true);
         self.a = !self.a;
     }
 
-    pub fn alu_rr_a_r8(&mut self, operand: ArithmeticOperand) {
-        let temp = (if self.get_flag_carry() { 1 } else { 0 } << 7)
+    // rotation
+
+    pub fn alu_rra_a_r8(&mut self) {
+        self.alu_rr_r8(ArithmeticOperand::A);
+    }
+
+    pub fn alu_rrca_a_r8(&mut self) {
+        self.alu_rrc_r8(ArithmeticOperand::A);
+    }
+
+    pub fn alu_srl_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = self.get_arithmetic_target_r8(operand) >> 1;
+        self.set_flag_zero(result == 0);
+        self.set_flag_subtraction(false);
+        self.set_flag_half_carry(false);
+        self.set_flag_carry(self.get_arithmetic_target_r8(operand) & 0x01 == 0x01);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
+    }
+
+    pub fn alu_rla_a_r8(&mut self) {
+        self.alu_rl_r8(ArithmeticOperand::A);
+    }
+
+    pub fn alu_rlca_a_r8(&mut self) {
+        self.alu_rlc_r8(ArithmeticOperand::A);
+    }
+
+    pub fn alu_rr_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = (if self.get_flag_carry() { 1 } else { 0 } << 7)
             | (self.get_arithmetic_target_r8(operand) >> 1);
-        self.set_flag_zero(false);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(self.get_arithmetic_target_r8(operand) & 0x01 == 0x01);
-        self.set_arithmetic_target_r8(operand, temp);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_rrc_a_r8(&mut self, operand: ArithmeticOperand) {
-        self.set_flag_zero(false);
+    pub fn alu_rrc_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = self.get_arithmetic_target_r8(operand).rotate_right(1);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(self.get_arithmetic_target_r8(operand) & 0x01 == 0x01);
-        self.set_arithmetic_target_r8(
-            operand,
-            self.get_arithmetic_target_r8(operand).rotate_right(1),
-        );
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_sra_a_r8(&mut self, operand: ArithmeticOperand) {
-        self.set_flag_zero(false);
+    pub fn alu_sra_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = (self.get_arithmetic_target_r8(operand) >> 1)
+            | (self.get_arithmetic_target_r8(operand) & 0b10000000);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(self.get_arithmetic_target_r8(operand) & 0x01 == 0x01);
-        self.set_arithmetic_target_r8(operand, self.get_arithmetic_target_r8(operand) >> 1);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_rl_a_r8(&mut self, operand: ArithmeticOperand) {
-        let temp = (if self.get_flag_carry() { 1 } else { 0 })
+    pub fn alu_rl_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = (if self.get_flag_carry() { 1 } else { 0 })
             | (self.get_arithmetic_target_r8(operand) << 1);
-        self.set_flag_zero(false);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(self.get_arithmetic_target_r8(operand) >> 7 == 0x01);
-        self.set_arithmetic_target_r8(operand, temp);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_rlc_a_r8(&mut self, operand: ArithmeticOperand) {
-        self.set_flag_zero(false);
+    pub fn alu_rlc_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = self.get_arithmetic_target_r8(operand).rotate_left(1);
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(self.get_arithmetic_target_r8(operand) >> 7 == 0x01);
-        self.set_arithmetic_target_r8(
-            operand,
-            self.get_arithmetic_target_r8(operand).rotate_left(1),
-        );
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_sla_a_r8(&mut self, operand: ArithmeticOperand) {
-        self.set_flag_zero(false);
+    pub fn alu_sla_r8(&mut self, operand: ArithmeticOperand) -> u8 {
+        let result = self.get_arithmetic_target_r8(operand) << 1;
+        self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(self.get_arithmetic_target_r8(operand) >> 7 == 0x01);
-        self.set_arithmetic_target_r8(operand, self.get_arithmetic_target_r8(operand) << 1);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
     // bit operations
 
-    pub fn alu_bit_a_r8(&mut self, operand: ArithmeticOperand, index: u8) {
+    pub fn alu_bit_b3_r8(&mut self, index: u8, operand: ArithmeticOperand) {
         if index >= 8 {
             panic!("Bit index has to between [0, 7]!");
         }
 
-        self.set_flag_zero((self.get_arithmetic_target_r8(operand) >> index) & 0x01 == 0x01);
+        self.set_flag_zero((self.get_arithmetic_target_r8(operand) >> index) & 0x01 == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(true);
     }
 
-    pub fn alu_res_a_r8(&mut self, operand: ArithmeticOperand, index: u8) {
+    pub fn alu_res_b3_r8(&mut self, index: u8, operand: ArithmeticOperand) -> u8 {
         if index >= 8 {
             panic!("Bit index has to between [0, 7]!");
         }
 
-        self.set_arithmetic_target_r8(
-            operand,
-            self.get_arithmetic_target_r8(operand) & !(1 << index),
-        );
+        let result = self.get_arithmetic_target_r8(operand) & !(1 << index);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
-    pub fn alu_set_a_r8(&mut self, operand: ArithmeticOperand, index: u8) {
+    pub fn alu_set_b3_r8(&mut self, index: u8, operand: ArithmeticOperand) -> u8 {
         if index >= 8 {
             panic!("Bit index has to between [0, 7]!");
         }
 
-        self.set_arithmetic_target_r8(
-            operand,
-            self.get_arithmetic_target_r8(operand) | (1 << index),
-        );
+        let result = self.get_arithmetic_target_r8(operand) | (1 << index);
+
+        match operand {
+            ArithmeticOperand::IND_HL => {},
+            _ => self.set_arithmetic_target_r8(operand, result),
+        }
+
+        result
     }
 
     // carry flag
 
-    pub fn alu_ccf_a_r8(&mut self) {
+    pub fn alu_ccf(&mut self) {
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(!self.get_flag_carry());
     }
 
-    pub fn alu_scf_a_r8(&mut self) {
+    pub fn alu_scf(&mut self) {
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
         self.set_flag_carry(true);
@@ -675,7 +745,7 @@ mod tests {
             a: 0b00000010,
             ..Registers::default()
         };
-        registers.alu_sra_a_r8(ArithmeticOperand::A);
+        registers.alu_sra_r8(ArithmeticOperand::A);
         assert_eq!(
             registers.a, 0b00000001,
             "Register A's values is not correct!"
@@ -684,7 +754,7 @@ mod tests {
             !registers.get_flag_carry(),
             "The carry flag should not be set!"
         );
-        registers.alu_sra_a_r8(ArithmeticOperand::A);
+        registers.alu_sra_r8(ArithmeticOperand::A);
         assert_eq!(registers.a, 0x00, "Register A's values is not correct!");
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
 
@@ -692,7 +762,7 @@ mod tests {
             a: 0b01000000,
             ..Registers::default()
         };
-        registers.alu_sla_a_r8(ArithmeticOperand::A);
+        registers.alu_sla_r8(ArithmeticOperand::A);
         assert_eq!(
             registers.a, 0b10000000,
             "Register A's values is not correct!"
@@ -701,7 +771,7 @@ mod tests {
             !registers.get_flag_carry(),
             "The carry flag should not be set!"
         );
-        registers.alu_sla_a_r8(ArithmeticOperand::A);
+        registers.alu_sla_r8(ArithmeticOperand::A);
         assert_eq!(registers.a, 0x00, "Register A's values is not correct!");
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
     }

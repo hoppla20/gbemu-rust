@@ -33,7 +33,7 @@ impl Cpu {
                 sp: 0xfffe,
             },
 
-            current_instruction: Instruction::NOP,
+            current_instruction: Instruction::nop,
             current_instruction_completed: false,
             current_instruction_cycle: 0,
         };
