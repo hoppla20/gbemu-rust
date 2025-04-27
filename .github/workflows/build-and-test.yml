@@ -1,0 +1,77 @@
+name: Build and test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+    branches:
+      - '*'
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile release
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+      pull-requests: write
+
+    concurrency:
+      group: coverage-main
+      cancel-in-progress: true
+
+    steps:
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@nextest
+
+      - uses: actions/checkout@v4
+      - name: Run tests and generate coverage
+        uses: actions-rs/cargo@v1
+        with:
+          command: llvm-cov
+          args: nextest --html
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        if: ${{ github.event_name == 'push' && github.event.ref == 'refs/heads/main' }}
+        with:
+          folder: ./target/llvm-cov/html/
+          branch: gh-pages
+          target-folder: coverage
+          clean-exclude: pr/coverage
+          force: false
+
+      - name: Deploy to GitHub Pages
+        uses: rossjrw/pr-preview-action@v1
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          source-dir: ./target/llvm-cov/html/
+          preview-branch: gh-pages
+          umbrella-dir: pr/coverage
+          action: auto
