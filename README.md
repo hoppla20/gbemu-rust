@@ -1,6 +1,6 @@
 # Gameboy Emulator written in Rust
 
-![CI status](https://github.com/github/docs/actions/workflows/build-test-deploy.yml/badge.svg)
+![CI status](https://github.com/hoppla20/gbemu-rust/actions/workflows/build-test-deploy.yml/badge.svg)
 
 ## Links
 
