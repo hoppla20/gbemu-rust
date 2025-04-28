@@ -14,3 +14,6 @@ opt-level = 3
 
 [profile.release]
 opt-level = 3
+
+[dependencies]
+lazy_static = "1.5.0"

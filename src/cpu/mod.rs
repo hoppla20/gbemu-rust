@@ -6,18 +6,33 @@ pub mod registers;
 use instructions::Instruction;
 use registers::Registers;
 
-use crate::memory::mbcs::Mbc;
+use crate::memory::mmu::Mmu;
 
 pub struct Cpu {
     pub registers: Registers,
 
     current_instruction: Instruction,
-    current_instruction_completed: bool,
     current_instruction_cycle: u8,
 }
 
 impl Cpu {
-    pub fn new_dmg(mbc: &impl Mbc, carry_flags: bool) -> Self {
+    pub fn new(mmu: &Mmu) -> Self {
+        let mut result = Cpu {
+            registers: Registers::default(),
+
+            current_instruction: Instruction::nop,
+            current_instruction_cycle: 0,
+        };
+
+        match result.decode_instruction(mmu) {
+            Ok(instr) => result.current_instruction = instr,
+            Err(err) => panic!("{:?}", err),
+        }
+
+        result
+    }
+
+    pub fn new_dmg(mmu: &Mmu, carry_flags: bool) -> Self {
         let mut result = Cpu {
             registers: Registers {
                 a: 0x01,
@@ -34,11 +49,10 @@ impl Cpu {
             },
 
             current_instruction: Instruction::nop,
-            current_instruction_completed: false,
             current_instruction_cycle: 0,
         };
 
-        match result.decode_instruction(mbc) {
+        match result.decode_instruction(mmu) {
             Ok(instr) => result.current_instruction = instr,
             Err(err) => panic!("{:?}", err),
         }

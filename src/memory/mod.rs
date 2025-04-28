@@ -1,4 +1,5 @@
 pub mod mbcs;
+pub mod mmu;
 
 pub(super) const ROM_BANK_SIZE: usize = 0x4000;
 pub(super) const V_RAM_BANK_SIZE: usize = 0x2000;
@@ -22,58 +23,6 @@ pub(super) const UNUSABLE_ADDR: u16 = OAM_ADDR + (OAM_SIZE as u16);
 pub(super) const IO_REGISTERS_ADDR: u16 = UNUSABLE_ADDR + (UNUSABLE_SIZE as u16);
 pub(super) const H_RAM_ADDR: u16 = IO_REGISTERS_ADDR + (IO_REGISTERS_SIZE as u16);
 pub(super) const IE_REGISTER_ADDR: u16 = H_RAM_ADDR + (H_RAM_SIZE as u16);
-
-pub struct Memory {
-    pub rom: Vec<u8>,
-    pub e_ram: Vec<u8>,
-    pub w_ram: Vec<u8>,
-    pub h_ram: [u8; H_RAM_SIZE],
-    pub v_ram: Vec<u8>,
-    pub oam: [u8; OAM_SIZE],
-
-    is_cgb: bool,
-}
-
-impl Memory {
-    fn new(rom_size: usize, e_ram_size: usize, is_cgb: bool) -> Self {
-        if rom_size % ROM_BANK_SIZE != 0 {
-            panic!(
-                "The rom size has to be a multiple of 0x{:x}! Got: 0x{:x}",
-                ROM_BANK_SIZE, rom_size
-            );
-        }
-
-        if e_ram_size % E_RAM_BANK_SIZE != 0 {
-            panic!(
-                "The external ram size has to be a multiple of 0x{:x}! Got: 0x{:x}",
-                E_RAM_BANK_SIZE, e_ram_size
-            );
-        }
-
-        let w_ram_size = if is_cgb {
-            W_RAM_BANK_SIZE * 8
-        } else {
-            W_RAM_BANK_SIZE * 2
-        };
-
-        let v_ram_size = if is_cgb {
-            V_RAM_BANK_SIZE * 2
-        } else {
-            V_RAM_BANK_SIZE
-        };
-
-        Memory {
-            rom: vec![0; rom_size],
-            e_ram: vec![0; e_ram_size],
-            w_ram: vec![0; w_ram_size],
-            h_ram: [0; H_RAM_SIZE],
-            v_ram: vec![0; v_ram_size],
-            oam: [0; OAM_SIZE],
-
-            is_cgb,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
