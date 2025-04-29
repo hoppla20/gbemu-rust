@@ -8,7 +8,7 @@ mod cpu;
 mod memory;
 
 pub mod prelude {
-    pub use super::{cpu::Cpu, memory::mbc::Mbc0, memory::mmu::Mmu};
+    pub use super::{cpu::Cpu, memory::mbc::Mbc, memory::mbc::Mbc0, memory::mmu::Mmu};
 }
 
 #[cfg(test)]
