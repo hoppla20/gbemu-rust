@@ -1,4 +1,4 @@
-use gbemu_rust::{
+use crate::{
     cpu::Cpu,
     memory::{mbcs::Mbc0, mmu::Mmu},
 };

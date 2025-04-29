@@ -4,7 +4,7 @@ use crate::memory::mmu::Mmu;
 use crate::utils::bit_operations::extract_bits;
 use crate::utils::half_carry::half_carry_add_r8;
 
-use super::Cpu;
+use super::{Cpu, ExecutionError};
 
 macro_rules! panic_execuction {
     () => {
@@ -12,8 +12,14 @@ macro_rules! panic_execuction {
     };
 }
 
+#[derive(Debug)]
+pub enum DecodeError {
+    UnknownOpcode { opcode: u8 },
+    UnknownOperand { operand: u8 },
+}
+
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub enum ArithmeticOperand {
     B,
     C,
@@ -26,7 +32,7 @@ pub enum ArithmeticOperand {
 }
 
 impl TryFrom<u8> for ArithmeticOperand {
-    type Error = ExecutionError;
+    type Error = DecodeError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -38,7 +44,7 @@ impl TryFrom<u8> for ArithmeticOperand {
             x if x == ArithmeticOperand::L as u8 => Ok(ArithmeticOperand::L),
             x if x == ArithmeticOperand::IND_HL as u8 => Ok(ArithmeticOperand::IND_HL),
             x if x == ArithmeticOperand::A as u8 => Ok(ArithmeticOperand::A),
-            _ => Err(ExecutionError::DecodeOperand { operand: value }),
+            _ => Err(DecodeError::UnknownOperand { operand: value }),
         }
     }
 }
@@ -53,7 +59,7 @@ pub enum ArithmeticOperand16 {
 }
 
 impl TryFrom<u8> for ArithmeticOperand16 {
-    type Error = ExecutionError;
+    type Error = DecodeError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -61,7 +67,7 @@ impl TryFrom<u8> for ArithmeticOperand16 {
             x if x == ArithmeticOperand16::DE as u8 => Ok(ArithmeticOperand16::DE),
             x if x == ArithmeticOperand16::HL as u8 => Ok(ArithmeticOperand16::HL),
             x if x == ArithmeticOperand16::SP as u8 => Ok(ArithmeticOperand16::SP),
-            _ => Err(ExecutionError::DecodeOperand { operand: value }),
+            _ => Err(DecodeError::UnknownOperand { operand: value }),
         }
     }
 }
@@ -76,7 +82,7 @@ pub enum MemoryOperand16 {
 }
 
 impl TryFrom<u8> for MemoryOperand16 {
-    type Error = ExecutionError;
+    type Error = DecodeError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -84,7 +90,7 @@ impl TryFrom<u8> for MemoryOperand16 {
             x if x == MemoryOperand16::DE as u8 => Ok(MemoryOperand16::DE),
             x if x == MemoryOperand16::HLI as u8 => Ok(MemoryOperand16::HLI),
             x if x == MemoryOperand16::HLD as u8 => Ok(MemoryOperand16::HLD),
-            _ => Err(ExecutionError::DecodeOperand { operand: value }),
+            _ => Err(DecodeError::UnknownOperand { operand: value }),
         }
     }
 }
@@ -99,7 +105,7 @@ pub enum StackOperand16 {
 }
 
 impl TryFrom<u8> for StackOperand16 {
-    type Error = ExecutionError;
+    type Error = DecodeError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -107,7 +113,7 @@ impl TryFrom<u8> for StackOperand16 {
             x if x == StackOperand16::DE as u8 => Ok(StackOperand16::DE),
             x if x == StackOperand16::HL as u8 => Ok(StackOperand16::HL),
             x if x == StackOperand16::AF as u8 => Ok(StackOperand16::AF),
-            _ => Err(ExecutionError::DecodeOperand { operand: value }),
+            _ => Err(DecodeError::UnknownOperand { operand: value }),
         }
     }
 }
@@ -122,7 +128,7 @@ pub enum Condition {
 }
 
 impl TryFrom<u8> for Condition {
-    type Error = ExecutionError;
+    type Error = DecodeError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -130,7 +136,7 @@ impl TryFrom<u8> for Condition {
             x if x == Condition::Z as u8 => Ok(Condition::Z),
             x if x == Condition::NC as u8 => Ok(Condition::NC),
             x if x == Condition::C as u8 => Ok(Condition::C),
-            _ => Err(ExecutionError::DecodeOperand { operand: value }),
+            _ => Err(DecodeError::UnknownOperand { operand: value }),
         }
     }
 }
@@ -323,96 +329,37 @@ pub enum Instruction {
     // special
     halt,
     stop,
-}
 
-#[derive(Debug)]
-pub enum ExecutionError {
-    NoImpl { instruction: Instruction },
-    UnknownOpcode { opcode: u8 },
-    MemoryWrite { address: u16 },
-    MemoryRead { address: u16 },
-    DecodeOperand { operand: u8 },
-}
-
-macro_rules! instr_a_r8_match {
-    ($self:ident, $operand:ident, $instr:ident, $mmc:ident) => {
-        match ($operand, $self.current_instruction_cycle) {
-            (ArithmeticOperand::IND_HL, 0) => {
-                $self.registers.z = $mmc.read_byte($self.registers.get_hl());
-                Ok(false)
-            },
-            (ArithmeticOperand::IND_HL, 1) | (_, 0) => {
-                $self.registers.$instr($operand);
-                Ok(true)
-            },
-            _ => panic_execuction!(),
-        }
-    };
-}
-
-macro_rules! instr_a_n8_match {
-    ($self:ident, $instr:ident, $mmu:ident) => {
-        match $self.current_instruction_cycle {
-            0 => {
-                $self.registers.z = $mmu.read_byte($self.registers.pc);
-                Ok(())
-            },
-            1 => {
-                $self.registers.$instr(ArithmeticOperand::IND_HL);
-                Ok(())
-            },
-            _ => panic_execuction!(),
-        }
-    };
-}
-
-macro_rules! instr_r8_match {
-    ($self:ident, $operand:ident, $instr:ident, $mmu:ident) => {
-        match ($operand, $self.current_instruction_cycle) {
-            (ArithmeticOperand::IND_HL, 0) => {
-                $self.registers.z = $mmu.read_byte($self.registers.get_hl());
-                Ok(false)
-            },
-            (ArithmeticOperand::IND_HL, 1) => {
-                $mmu.write_byte($self.registers.get_hl(), $self.registers.$instr($operand));
-                Ok(false)
-            },
-            (ArithmeticOperand::IND_HL, 2) => Ok(true),
-            (_, 0) => {
-                $self.registers.$instr($operand);
-                Ok(true)
-            },
-            _ => panic_execuction!(),
-        }
-    };
+    // errors
+    unknown_opcode {
+        opcode: u8,
+    },
+    unknown_prefix_opcode {
+        opcode: u8,
+    },
 }
 
 macro_rules! arithmetic_operand_0_2 {
     ($opcode:ident) => {
-        extract_bits!($opcode: u8, 0, 2).try_into()?
+        extract_bits!($opcode: u8, 0, 2).try_into().unwrap()
     };
 }
 
 macro_rules! arithmetic_operand_3_5 {
     ($opcode:ident) => {
-        extract_bits!($opcode: u8, 3, 5).try_into()?
+        extract_bits!($opcode: u8, 3, 5).try_into().unwrap()
     };
 }
 
 macro_rules! arithmetic_operand_16_4_5 {
     ($opcode:ident) => {
-        extract_bits!($opcode: u8, 4, 5).try_into()?
+        extract_bits!($opcode: u8, 4, 5).try_into().unwrap()
     };
 }
 
-impl Cpu {
-    pub(super) fn decode_prefix_instruction(
-        &self,
-        mmu: &Mmu,
-    ) -> Result<Instruction, ExecutionError> {
-        let opcode = mmu.read_byte(self.registers.pc);
-
-        let mut result = Instruction::nop;
+impl Instruction {
+    pub(super) fn decode_prefix_instruction(opcode: u8) -> Self {
+        let mut result = Self::unknown_prefix_opcode { opcode };
 
         match extract_bits!(opcode: u8, 6, 7) {
             0b00 => match extract_bits!(opcode: u8, 3, 5) {
@@ -479,88 +426,138 @@ impl Cpu {
             _ => {},
         }
 
-        match result {
-            Instruction::nop => Err(ExecutionError::UnknownOpcode { opcode }),
-            _ => Ok(result),
-        }
+        result
     }
 
-    pub(super) fn decode_instruction(&self, mmu: &Mmu) -> Result<Instruction, ExecutionError> {
-        let opcode = mmu.read_byte(self.registers.pc);
-
+    pub(super) fn decode_instruction(opcode: u8) -> Instruction {
         if opcode == 0x00 {
-            return Ok(Instruction::nop);
+            return Instruction::nop;
         }
 
         if opcode == 0b11001011 {
-            return Ok(Instruction::prefix);
+            return Instruction::prefix;
         }
 
         match extract_bits!(opcode: u8, 6, 7) {
             0b00 => match extract_bits!(opcode: u8, 0, 3) {
-                0b0011 => Ok(Instruction::inc_r16 {
+                0b0011 => Instruction::inc_r16 {
                     operand: arithmetic_operand_16_4_5!(opcode),
-                }),
-                0b1011 => Ok(Instruction::dec_r16 {
+                },
+                0b1011 => Instruction::dec_r16 {
                     operand: arithmetic_operand_16_4_5!(opcode),
-                }),
-                0b1001 => Ok(Instruction::add_hl_r16 {
+                },
+                0b1001 => Instruction::add_hl_r16 {
                     operand: arithmetic_operand_16_4_5!(opcode),
-                }),
+                },
                 _ => match extract_bits!(opcode: u8, 0, 2) {
-                    0b100 => Ok(Instruction::inc_r8 {
+                    0b100 => Instruction::inc_r8 {
                         operand: arithmetic_operand_3_5!(opcode),
-                    }),
-                    0b101 => Ok(Instruction::dec_r8 {
-                        operand: arithmetic_operand_3_5!(opcode),
-                    }),
-                    0b111 => match extract_bits!(opcode: u8, 3, 5) {
-                        0b000 => Ok(Instruction::rla),
-                        0b001 => Ok(Instruction::rrca),
-                        0b010 => Ok(Instruction::rla),
-                        0b011 => Ok(Instruction::rra),
-                        0b100 => Ok(Instruction::daa),
-                        0b101 => Ok(Instruction::cpl),
-                        0b110 => Ok(Instruction::scf),
-                        0b111 => Ok(Instruction::ccf),
-                        _ => Err(ExecutionError::UnknownOpcode { opcode }),
                     },
-                    _ => Err(ExecutionError::UnknownOpcode { opcode }),
+                    0b101 => Instruction::dec_r8 {
+                        operand: arithmetic_operand_3_5!(opcode),
+                    },
+                    0b111 => match extract_bits!(opcode: u8, 3, 5) {
+                        0b000 => Instruction::rla,
+                        0b001 => Instruction::rrca,
+                        0b010 => Instruction::rla,
+                        0b011 => Instruction::rra,
+                        0b100 => Instruction::daa,
+                        0b101 => Instruction::cpl,
+                        0b110 => Instruction::scf,
+                        0b111 => Instruction::ccf,
+                        _ => Instruction::unknown_opcode { opcode },
+                    },
+                    _ => Instruction::unknown_opcode { opcode },
                 },
             },
-            0b01 => Err(ExecutionError::UnknownOpcode { opcode }),
+            0b01 => Instruction::unknown_opcode { opcode },
             0b10 => match extract_bits!(opcode: u8, 3, 5) {
-                0b000 => Ok(Instruction::add_a_r8 {
+                0b000 => Instruction::add_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                0b001 => Ok(Instruction::adc_a_r8 {
+                },
+                0b001 => Instruction::adc_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                0b010 => Ok(Instruction::sub_a_r8 {
+                },
+                0b010 => Instruction::sub_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                0b011 => Ok(Instruction::sbc_a_r8 {
+                },
+                0b011 => Instruction::sbc_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                0b100 => Ok(Instruction::and_a_r8 {
+                },
+                0b100 => Instruction::and_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                0b101 => Ok(Instruction::xor_a_r8 {
+                },
+                0b101 => Instruction::xor_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                0b110 => Ok(Instruction::or_a_r8 {
+                },
+                0b110 => Instruction::or_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                0b111 => Ok(Instruction::cp_a_r8 {
+                },
+                0b111 => Instruction::cp_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                }),
-                _ => Err(ExecutionError::UnknownOpcode { opcode }),
+                },
+                _ => Self::unknown_opcode { opcode },
             },
-            _ => Err(ExecutionError::UnknownOpcode { opcode }),
+            _ => Self::unknown_opcode { opcode },
         }
     }
+}
 
-    fn instruction_step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
+macro_rules! instr_a_r8_match {
+    ($self:ident, $operand:ident, $instr:ident, $mmc:ident) => {
+        match ($operand, $self.current_instruction_cycle) {
+            (ArithmeticOperand::IND_HL, 0) => {
+                $self.registers.z = $mmc.read_byte($self.registers.get_hl());
+                Ok(false)
+            },
+            (ArithmeticOperand::IND_HL, 1) | (_, 0) => {
+                $self.registers.$instr($operand);
+                Ok(true)
+            },
+            _ => panic_execuction!(),
+        }
+    };
+}
+
+macro_rules! instr_a_n8_match {
+    ($self:ident, $instr:ident, $mmu:ident) => {
+        match $self.current_instruction_cycle {
+            0 => {
+                $self.registers.z = $mmu.read_byte($self.registers.pc);
+                Ok(())
+            },
+            1 => {
+                $self.registers.$instr(ArithmeticOperand::IND_HL);
+                Ok(())
+            },
+            _ => panic_execuction!(),
+        }
+    };
+}
+
+macro_rules! instr_r8_match {
+    ($self:ident, $operand:ident, $instr:ident, $mmu:ident) => {
+        match ($operand, $self.current_instruction_cycle) {
+            (ArithmeticOperand::IND_HL, 0) => {
+                $self.registers.z = $mmu.read_byte($self.registers.get_hl());
+                Ok(false)
+            },
+            (ArithmeticOperand::IND_HL, 1) => {
+                $mmu.write_byte($self.registers.get_hl(), $self.registers.$instr($operand));
+                Ok(false)
+            },
+            (ArithmeticOperand::IND_HL, 2) => Ok(true),
+            (_, 0) => {
+                $self.registers.$instr($operand);
+                Ok(true)
+            },
+            _ => panic_execuction!(),
+        }
+    };
+}
+
+impl Cpu {
+    pub(super) fn instruction_step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
         match self.current_instruction {
             Instruction::nop => Ok(true),
 
@@ -717,27 +714,5 @@ impl Cpu {
                 instruction: self.current_instruction,
             }),
         }
-    }
-
-    pub fn step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
-        let completed = self.instruction_step(mmu)?;
-
-        if completed {
-            self.registers.pc += 1;
-
-            match self.current_instruction {
-                Instruction::prefix => {
-                    self.current_instruction = self.decode_prefix_instruction(mmu)?
-                },
-                _ => self.current_instruction = self.decode_instruction(mmu)?,
-            }
-            self.current_instruction_cycle = 0;
-        } else {
-            self.current_instruction_cycle += 1;
-
-            return Ok(false);
-        }
-
-        Ok(completed)
     }
 }
