@@ -4,8 +4,12 @@
 
 mod utils;
 
-pub mod cpu;
-pub mod memory;
+mod cpu;
+mod memory;
+
+pub mod prelude {
+    pub use super::{cpu::Cpu, memory::mbc::Mbc0, memory::mmu::Mmu};
+}
 
 #[cfg(test)]
 mod tests;

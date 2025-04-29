@@ -1,7 +1,4 @@
-use crate::{
-    cpu::Cpu,
-    memory::{mbcs::Mbc0, mmu::Mmu},
-};
+use crate::prelude::*;
 
 #[test]
 fn test_arithmetics_simple() {

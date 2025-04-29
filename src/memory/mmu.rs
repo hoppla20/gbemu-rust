@@ -1,4 +1,4 @@
-use super::mbcs::Mbc;
+use super::mbc::Mbc;
 
 use super::{
     E_RAM_BANK_ADDR, ECHO_RAM_ADDR, H_RAM_ADDR, H_RAM_SIZE, IE_REGISTER_ADDR, IO_REGISTERS_ADDR,

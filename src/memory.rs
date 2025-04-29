@@ -1,4 +1,4 @@
-pub mod mbcs;
+pub mod mbc;
 pub mod mmu;
 
 pub(super) const ROM_BANK_SIZE: usize = 0x4000;

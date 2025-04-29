@@ -1,6 +1,6 @@
-mod rom_only;
+mod mbc0;
 
-pub use rom_only::Mbc0;
+pub use mbc0::Mbc0;
 
 pub trait Mbc {
     fn read_rom(&self, address: u16) -> u8;
