@@ -1,8 +1,11 @@
-use super::*;
-
 use std::{
     fs::File,
     io::{BufReader, Read},
+};
+
+use crate::{
+    cpu::Cpu,
+    tests::{Mbc0, Mmu},
 };
 
 #[test]
