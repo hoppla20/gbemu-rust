@@ -199,7 +199,6 @@ pub enum Instruction {
         immediate: u8,
     },
     cp_a_n8 {
-        operand: ArithmeticOperand,
         immediate: u8,
     },
     cpl,
@@ -359,143 +358,128 @@ macro_rules! arithmetic_operand_16_4_5 {
 
 impl Instruction {
     pub(super) fn decode_prefix_instruction(opcode: u8) -> Self {
-        let mut result = Self::unknown_prefix_opcode { opcode };
-
         match extract_bits!(opcode: u8, 6, 7) {
             0b00 => match extract_bits!(opcode: u8, 3, 5) {
-                0b000 => {
-                    result = Instruction::rlc_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                0b001 => {
-                    result = Instruction::rrc_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                0b010 => {
-                    result = Instruction::rl_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                0b011 => {
-                    result = Instruction::rr_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                0b100 => {
-                    result = Instruction::sla_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                0b101 => {
-                    result = Instruction::sra_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                0b110 => {
-                    result = Instruction::swap_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                0b111 => {
-                    result = Instruction::srl_r8 {
-                        operand: arithmetic_operand_0_2!(opcode),
-                    }
-                },
-                _ => {},
-            },
-            0b01 => {
-                result = Instruction::bit_b3_r8 {
+                0b000 => Self::rlc_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                    index: extract_bits!(opcode: u8, 3, 5),
-                }
-            },
-            0b10 => {
-                result = Instruction::res_b3_r8 {
+                },
+                0b001 => Self::rrc_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                    index: extract_bits!(opcode: u8, 3, 5),
-                }
-            },
-            0b11 => {
-                result = Instruction::set_b3_r8 {
+                },
+                0b010 => Self::rl_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
-                    index: extract_bits!(opcode: u8, 3, 5),
-                }
+                },
+                0b011 => Self::rr_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                },
+                0b100 => Self::sla_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                },
+                0b101 => Self::sra_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                },
+                0b110 => Self::swap_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                },
+                0b111 => Self::srl_r8 {
+                    operand: arithmetic_operand_0_2!(opcode),
+                },
+                _ => Self::unknown_opcode { opcode },
             },
-            _ => {},
+            0b01 => Self::bit_b3_r8 {
+                operand: arithmetic_operand_0_2!(opcode),
+                index: extract_bits!(opcode: u8, 3, 5),
+            },
+            0b10 => Self::res_b3_r8 {
+                operand: arithmetic_operand_0_2!(opcode),
+                index: extract_bits!(opcode: u8, 3, 5),
+            },
+            0b11 => Self::set_b3_r8 {
+                operand: arithmetic_operand_0_2!(opcode),
+                index: extract_bits!(opcode: u8, 3, 5),
+            },
+            _ => Self::unknown_opcode { opcode },
         }
-
-        result
     }
 
     pub(super) fn decode_instruction(opcode: u8) -> Instruction {
         if opcode == 0x00 {
-            return Instruction::nop;
+            return Self::nop;
         }
 
         if opcode == 0b11001011 {
-            return Instruction::prefix;
+            return Self::prefix;
         }
 
         match extract_bits!(opcode: u8, 6, 7) {
             0b00 => match extract_bits!(opcode: u8, 0, 3) {
-                0b0011 => Instruction::inc_r16 {
+                0b0011 => Self::inc_r16 {
                     operand: arithmetic_operand_16_4_5!(opcode),
                 },
-                0b1011 => Instruction::dec_r16 {
+                0b1011 => Self::dec_r16 {
                     operand: arithmetic_operand_16_4_5!(opcode),
                 },
-                0b1001 => Instruction::add_hl_r16 {
+                0b1001 => Self::add_hl_r16 {
                     operand: arithmetic_operand_16_4_5!(opcode),
                 },
                 _ => match extract_bits!(opcode: u8, 0, 2) {
-                    0b100 => Instruction::inc_r8 {
+                    0b100 => Self::inc_r8 {
                         operand: arithmetic_operand_3_5!(opcode),
                     },
-                    0b101 => Instruction::dec_r8 {
+                    0b101 => Self::dec_r8 {
                         operand: arithmetic_operand_3_5!(opcode),
                     },
                     0b111 => match extract_bits!(opcode: u8, 3, 5) {
-                        0b000 => Instruction::rla,
-                        0b001 => Instruction::rrca,
-                        0b010 => Instruction::rla,
-                        0b011 => Instruction::rra,
-                        0b100 => Instruction::daa,
-                        0b101 => Instruction::cpl,
-                        0b110 => Instruction::scf,
-                        0b111 => Instruction::ccf,
-                        _ => Instruction::unknown_opcode { opcode },
+                        0b000 => Self::rla,
+                        0b001 => Self::rrca,
+                        0b010 => Self::rla,
+                        0b011 => Self::rra,
+                        0b100 => Self::daa,
+                        0b101 => Self::cpl,
+                        0b110 => Self::scf,
+                        0b111 => Self::ccf,
+                        _ => Self::unknown_opcode { opcode },
                     },
-                    _ => Instruction::unknown_opcode { opcode },
+                    _ => Self::unknown_opcode { opcode },
                 },
             },
-            0b01 => Instruction::unknown_opcode { opcode },
+            0b01 => Self::unknown_opcode { opcode },
             0b10 => match extract_bits!(opcode: u8, 3, 5) {
-                0b000 => Instruction::add_a_r8 {
+                0b000 => Self::add_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
-                0b001 => Instruction::adc_a_r8 {
+                0b001 => Self::adc_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
-                0b010 => Instruction::sub_a_r8 {
+                0b010 => Self::sub_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
-                0b011 => Instruction::sbc_a_r8 {
+                0b011 => Self::sbc_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
-                0b100 => Instruction::and_a_r8 {
+                0b100 => Self::and_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
-                0b101 => Instruction::xor_a_r8 {
+                0b101 => Self::xor_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
-                0b110 => Instruction::or_a_r8 {
+                0b110 => Self::or_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
-                0b111 => Instruction::cp_a_r8 {
+                0b111 => Self::cp_a_r8 {
                     operand: arithmetic_operand_0_2!(opcode),
                 },
+                _ => Self::unknown_opcode { opcode },
+            },
+            0b11 => match extract_bits!(opcode: u8, 0, 5) {
+                0b000110 => Self::add_a_n8 { immediate: 0 },
+                0b001110 => Self::adc_a_n8 { immediate: 0 },
+                0b010110 => Self::sub_a_n8 { immediate: 0 },
+                0b011110 => Self::sbc_a_n8 { immediate: 0 },
+                0b100110 => Self::and_a_n8 { immediate: 0 },
+                0b101110 => Self::xor_a_n8 { immediate: 0 },
+                0b110110 => Self::or_a_n8 { immediate: 0 },
+                0b111110 => Self::cp_a_n8 { immediate: 0 },
                 _ => Self::unknown_opcode { opcode },
             },
             _ => Self::unknown_opcode { opcode },
