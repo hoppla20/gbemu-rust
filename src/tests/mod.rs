@@ -1,11 +1,7 @@
 use log::info;
 use tracing::Level;
 use tracing_subscriber::{
-    Layer,
-    filter::{self, LevelFilter},
-    fmt,
-    layer::SubscriberExt,
-    util::SubscriberInitExt,
+    EnvFilter, Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
 pub use super::prelude::*;
@@ -19,7 +15,7 @@ pub fn setup_logger() {
         .unwrap();
     let layer_stdout = fmt::Layer::default()
         .with_writer(std::io::stdout)
-        .with_filter(LevelFilter::INFO);
+        .with_filter(EnvFilter::from_default_env());
 
     let layer_trace = fmt::Layer::default()
         .with_writer(trace_log)

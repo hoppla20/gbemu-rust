@@ -13,11 +13,10 @@ use crate::{
     tests::{Mbc0, Mmu, setup_logger},
 };
 
-#[test]
-fn test_blargg_cpu_instrs_01() {
+fn test_blargg(file_path: &str) {
     setup_logger();
 
-    let f = File::open("test_roms/blargg/cpu_instrs/individual/01-special.gb").unwrap();
+    let f = File::open(file_path).unwrap();
     let mut reader = BufReader::new(f);
     let mut rom = Vec::new();
     reader.read_to_end(&mut rom).unwrap();
@@ -45,6 +44,11 @@ fn test_blargg_cpu_instrs_01() {
             break;
         }
     }
+}
+
+#[test]
+fn test_blargg_cpu_instrs_01() {
+    test_blargg("test_roms/blargg/cpu_instrs/individual/01-special.gb");
 
     info!("Running gameboy-doctor");
     if cfg!(target_os = "windows") {
@@ -71,4 +75,9 @@ fn test_blargg_cpu_instrs_01() {
             );
         }
     };
+}
+
+#[test]
+fn test_blargg_cpu_instrs_02() {
+    test_blargg("test_roms/blargg/cpu_instrs/individual/02-interrupts.gb");
 }
