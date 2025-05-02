@@ -5,10 +5,14 @@
 mod utils;
 
 mod cpu;
+mod graphics;
 mod memory;
+mod timer;
 
 pub mod prelude {
-    pub use super::{cpu::Cpu, memory::mbc::Mbc, memory::mbc::Mbc0, memory::mmu::Mmu};
+    pub use super::{
+        cpu::Cpu, cpu::registers::Registers, memory::mbc::Mbc, memory::mbc::Mbc0, memory::mmu::Mmu,
+    };
 }
 
 #[cfg(test)]

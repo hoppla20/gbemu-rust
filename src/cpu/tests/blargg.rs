@@ -22,14 +22,15 @@ fn test_blargg_cpu_instrs_01() {
     reader.read_to_end(&mut rom).unwrap();
 
     let mbc = Mbc0::new_from_buffer(&rom, false);
-    let mut mmu = Mmu::new(Box::new(mbc), false);
-    let mut cpu = Cpu::new_dmg(&mmu);
+    let mut mmu = Mmu::new(Box::new(mbc));
+    mmu.graphics.registers.lcd_y = 0x90;
+    let mut cpu = Cpu::new(&mmu);
 
     let mut cycle = 0;
     loop {
         cycle += 1;
         if let Err(err) = cpu.step(&mut mmu) {
-            warn!("Encountered error on cycle {}: {:?}", cycle, err);
+            warn!("Encountered error on cycle {}: {:02X?}", cycle, err);
             break;
         }
     }

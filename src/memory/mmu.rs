@@ -1,32 +1,37 @@
+use log::debug;
+
 use super::mbc::Mbc;
 
+use super::super::graphics::GraphicsState;
 use super::{
     E_RAM_BANK_ADDR, ECHO_RAM_ADDR, H_RAM_ADDR, H_RAM_SIZE, IE_REGISTER_ADDR, IO_REGISTERS_ADDR,
-    OAM_ADDR, UNUSABLE_ADDR, V_RAM_ADDR, W_RAM_BANK_0_ADDR, W_RAM_BANK_SIZE,
+    IoRegisters, OAM_ADDR, UNUSABLE_ADDR, V_RAM_ADDR, W_RAM_BANK_0_ADDR, W_RAM_BANK_SIZE,
 };
 
+static CYCLES_PER_CLOCK_LOOKUP: [u16; 4] = [256, 4, 16, 64];
+
 pub struct Mmu {
-    is_cgb: bool,
     oam_transfer: bool,
 
     mbc: Box<dyn Mbc + 'static>,
     w_ram: Vec<u8>,
     h_ram: [u8; H_RAM_SIZE],
+
+    pub io: IoRegisters,
+    pub graphics: GraphicsState,
 }
 
 impl Mmu {
-    pub fn new(mbc: Box<dyn Mbc + 'static>, is_cgb: bool) -> Self {
+    pub fn new(mbc: Box<dyn Mbc + 'static>) -> Self {
         Mmu {
-            is_cgb,
             oam_transfer: false,
 
             mbc,
-            w_ram: if is_cgb {
-                vec![0; W_RAM_BANK_SIZE * 8]
-            } else {
-                vec![0; W_RAM_BANK_SIZE * 2]
-            },
+            w_ram: vec![0; W_RAM_BANK_SIZE * 2],
             h_ram: [0; H_RAM_SIZE],
+
+            io: IoRegisters::default(),
+            graphics: GraphicsState::default(),
         }
     }
 
@@ -40,11 +45,7 @@ impl Mmu {
         if address < E_RAM_BANK_ADDR {
             // vram
 
-            if self.is_cgb {
-                unimplemented!("VRAM Banking for CGB not implemented!");
-            }
-
-            unimplemented!("VRAM is not implemented!");
+            return self.graphics.v_ram[(address - V_RAM_ADDR) as usize];
         }
 
         if address < W_RAM_BANK_0_ADDR {
@@ -55,10 +56,6 @@ impl Mmu {
 
         if address < ECHO_RAM_ADDR {
             // wram
-
-            if self.is_cgb {
-                unimplemented!("VRAM Banking for CGB not implemented!");
-            }
 
             return self.w_ram[(address - W_RAM_BANK_0_ADDR) as usize];
         }
@@ -88,7 +85,46 @@ impl Mmu {
         if address < H_RAM_ADDR {
             // io registers
 
-            todo!("Implement i/o registers")
+            match address {
+                0xFF04 => {
+                    return self.io.timer.divider;
+                },
+                0xFF05 => {
+                    return self.io.timer.counter;
+                },
+                0xFF06 => {
+                    return self.io.timer.modulo;
+                },
+                0xFF07 => {
+                    return self.io.timer.control;
+                },
+                0xFF0F => {
+                    return self.io.interrupt_flags;
+                },
+
+                // TODO: audio
+                0xFF10..=0xFF26 => {
+                    debug!(
+                        "Reading from not implemented audio register at address 0x{:02X}. Returning 0x00",
+                        address
+                    );
+                    return 0x00;
+                },
+
+                // graphics
+                0xFF40 => return self.graphics.registers.lcd_control,
+                0xFF41 => return self.graphics.registers.lcd_status,
+                0xFF42 => return self.graphics.registers.screen_y,
+                0xFF43 => return self.graphics.registers.screen_x,
+                0xFF44 => return self.graphics.registers.lcd_y,
+                0xFF45 => return self.graphics.registers.lcd_y_compare,
+                0xFF47 => return self.graphics.registers.background_palette,
+                0xFF48 => return self.graphics.registers.obj_palette[0],
+                0xFF49 => return self.graphics.registers.obj_palette[1],
+                0xFF4A => return self.graphics.registers.window_y,
+                0xFF4B => return self.graphics.registers.window_x,
+                _ => todo!("Implement i/o register read at address 0x{:02X}", address),
+            }
         }
 
         if address < IE_REGISTER_ADDR {
@@ -100,10 +136,13 @@ impl Mmu {
         if address == IE_REGISTER_ADDR {
             // interrupt enable register
 
-            todo!("Implement IE register")
+            return self.io.interrupt_enable;
         }
 
-        panic!("Memory read to address 0x{:x} is not implemented!", address);
+        panic!(
+            "Memory read from address 0x{:02X} is not implemented!",
+            address
+        );
     }
 
     pub fn write_byte(&mut self, address: u16, value: u8) {
@@ -116,11 +155,8 @@ impl Mmu {
         if address < E_RAM_BANK_ADDR {
             // vram
 
-            if self.is_cgb {
-                unimplemented!("VRAM Banking for CGB not implemented!");
-            }
-
-            unimplemented!("VRAM not implemented!");
+            self.graphics.v_ram[(address - V_RAM_ADDR) as usize] = value;
+            return;
         }
 
         if address < W_RAM_BANK_0_ADDR {
@@ -132,10 +168,6 @@ impl Mmu {
 
         if address < ECHO_RAM_ADDR {
             // wram
-
-            if self.is_cgb {
-                unimplemented!("VRAM Banking for CGB not implemented!");
-            }
 
             self.w_ram[(address - W_RAM_BANK_0_ADDR) as usize] = value;
             return;
@@ -163,7 +195,84 @@ impl Mmu {
         if address < H_RAM_ADDR {
             // io registers
 
-            todo!("Implement i/o registers")
+            match address {
+                0xFF04 => {
+                    self.io.timer.divider = 0x00;
+                    return;
+                },
+                0xFF05 => {
+                    self.io.timer.counter = value;
+                    return;
+                },
+                0xFF06 => {
+                    self.io.timer.modulo = value;
+                    return;
+                },
+                0xFF07 => {
+                    self.io.timer.control = value;
+                    return;
+                },
+                0xFF0F => {
+                    self.io.interrupt_flags = value;
+                    return;
+                },
+
+                // TODO: audio
+                0xFF10..=0xFF26 => {
+                    debug!(
+                        "Writing to not implemented audio register 0x{:02X}",
+                        address
+                    );
+                    return;
+                },
+
+                // graphics
+                0xFF40 => {
+                    self.graphics.registers.lcd_control = value;
+                    return;
+                },
+                0xFF41 => {
+                    self.graphics.registers.lcd_status = value;
+                    return;
+                },
+                0xFF42 => {
+                    self.graphics.registers.screen_y = value;
+                    return;
+                },
+                0xFF43 => {
+                    self.graphics.registers.screen_x = value;
+                    return;
+                },
+                0xFF44 => {
+                    self.graphics.registers.lcd_y = value;
+                    return;
+                },
+                0xFF45 => {
+                    self.graphics.registers.lcd_y_compare = value;
+                    return;
+                },
+                0xFF47 => {
+                    self.graphics.registers.background_palette = value;
+                    return;
+                },
+                0xFF48 => {
+                    self.graphics.registers.obj_palette[0] = value;
+                    return;
+                },
+                0xFF49 => {
+                    self.graphics.registers.obj_palette[1] = value;
+                    return;
+                },
+                0xFF4A => {
+                    self.graphics.registers.window_y = value;
+                    return;
+                },
+                0xFF4B => {
+                    self.graphics.registers.window_x = value;
+                    return;
+                },
+                _ => todo!("Implement i/o register read from address 0x{:02X}", address),
+            }
         }
 
         if address < IE_REGISTER_ADDR {
@@ -176,11 +285,12 @@ impl Mmu {
         if address == IE_REGISTER_ADDR {
             // interrupt enable register
 
-            todo!("Implement IE register")
+            self.io.interrupt_enable = value;
+            return;
         }
 
         panic!(
-            "Memory write to address 0x{:x} is not implemented!",
+            "Memory write to address 0x{:02X} is not implemented!",
             address
         );
     }

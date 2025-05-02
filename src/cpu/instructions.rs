@@ -269,6 +269,12 @@ pub enum Instruction {
     },
     ld_ind_n16_a,
     ld_a_ind_n16,
+    ld_ind_r16mem_a {
+        operand: MemoryOperand16,
+    },
+    ld_a_ind_r16mem {
+        operand: MemoryOperand16,
+    },
     ldh_ind_c_a,
     ldh_a_ind_c,
     ldh_ind_n8_a,
@@ -278,19 +284,13 @@ pub enum Instruction {
     ld_r16_n16 {
         operand: ArithmeticOperand16,
     },
-    ld_ind_r16mem_a {
-        operand: MemoryOperand16,
-    },
-    ld_a_ind_r16mem {
-        operand: MemoryOperand16,
-    },
     ld_ind_n16_sp,
     ld_sp_hl,
     ld_hl_sp_n8,
 
     // jumps
-    jr_n8,
-    jr_cond_n8 {
+    jr_i8,
+    jr_cond_i8 {
         condition: Condition,
     },
     jp_n16,
@@ -387,6 +387,11 @@ impl Instruction {
             0x76 => Self::halt,
             0xCB => Self::prefix,
 
+            0x18 => Self::jr_i8,
+            0x20 | 0x28 | 0x30 | 0x38 => Self::jr_cond_i8 {
+                condition: extract_bits!(opcode: u8, 3, 4).into(),
+            },
+
             0x01 | 0x11 | 0x21 | 0x31 => Self::ld_r16_n16 {
                 operand: extract_bits!(opcode: u8, 4, 5).into(),
             },
@@ -473,7 +478,7 @@ impl Instruction {
             },
 
             0xE0 => Self::ldh_ind_n8_a,
-            0xF0 => Self::ldh_ind_n8_a,
+            0xF0 => Self::ldh_a_ind_n8,
 
             0xE8 => Self::add_sp_n8,
             0xF8 => Self::ld_hl_sp_n8,
@@ -582,9 +587,35 @@ macro_rules! instr_r8_match {
 }
 
 impl Cpu {
+    fn jump_relative(&mut self) {
+        let z_sign = self.registers.z >> 7;
+        let (result, overflow) = self
+            .registers
+            .z
+            .overflowing_add((self.registers.pc & 0x00FF) as u8);
+        self.registers.z = result;
+        let adj = if overflow && (z_sign != 1) {
+            1
+        } else if !overflow && (z_sign == 1) {
+            -1
+        } else {
+            0
+        };
+        self.registers.w = ((self.registers.pc >> 8) as i16 + adj) as u8;
+    }
+
     pub(super) fn instruction_step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
         match self.current_instruction {
+            //special
             Instruction::nop => Ok(true),
+            Instruction::di => {
+                self.interrupt_enabled = false;
+                Ok(true)
+            },
+            Instruction::ei => {
+                self.interrupt_enabled = true;
+                Ok(true)
+            },
 
             // 8-bit arithmetics
             Instruction::add_a_r8 { operand } => {
@@ -735,7 +766,149 @@ impl Cpu {
                 }
             },
 
+            // 8-bit load operations
+            Instruction::ld_r8_n8 { operand } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers
+                        .set_arithmetic_target_r8(operand, self.registers.z);
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+            Instruction::ld_r8_r8 {
+                operand_a,
+                operand_b,
+            } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.set_arithmetic_target_r8(
+                        operand_a,
+                        self.registers.get_arithmetic_target_r8(operand_b),
+                    );
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+            Instruction::ld_ind_n16_a => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                2 => {
+                    mmu.write_byte(self.registers.get_wz(), self.registers.a);
+                    Ok(false)
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ld_ind_r16mem_a { operand } => match self.current_instruction_cycle {
+                0 => {
+                    mmu.write_byte(self.registers.get_memory_operand(operand), self.registers.a);
+                    Ok(false)
+                },
+                1 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ld_a_ind_r16mem { operand } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = mmu.read_byte(self.registers.get_memory_operand(operand));
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.a = self.registers.z;
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+            Instruction::ldh_ind_n8_a => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    mmu.write_byte(self.registers.z as u16 + 0xFF00, self.registers.a);
+                    Ok(false)
+                },
+                2 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ldh_a_ind_n8 => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.z = mmu.read_byte(self.registers.z as u16 + 0xFF00);
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.a = self.registers.z;
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+
+            // 16-bit load operations
+            Instruction::ld_r16_n16 { operand } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                2 => {
+                    self.registers
+                        .set_arithmetic_target_r16(operand, self.registers.get_wz());
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+
             // jumps
+            Instruction::jr_i8 => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.jump_relative();
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.pc = self.registers.get_wz();
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+            Instruction::jr_cond_i8 { condition } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    self.registers.check_condition(condition);
+                    Ok(false)
+                },
+                1 => {
+                    if self.registers.cc {
+                        self.jump_relative();
+                        Ok(false)
+                    } else {
+                        Ok(true)
+                    }
+                },
+                2 => {
+                    self.registers.pc = self.registers.get_wz();
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
             Instruction::jp_n16 => match self.current_instruction_cycle {
                 0 => {
                     self.registers.z = self.read_byte_pc(mmu);
@@ -743,7 +916,6 @@ impl Cpu {
                 },
                 1 => {
                     self.registers.w = self.read_byte_pc(mmu);
-                    (self.registers.pc, _) = self.registers.pc.overflowing_add(1);
                     Ok(false)
                 },
                 2 => {
@@ -751,6 +923,93 @@ impl Cpu {
                     Ok(false)
                 },
                 3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::call_n16 => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                3 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc >> 8) as u8);
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                4 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc & 0x00FF) as u8);
+                    self.registers.pc = self.registers.get_wz();
+                    Ok(false)
+                },
+                5 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ret => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = mmu.read_byte(self.registers.sp);
+                    self.registers.sp += 1;
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = mmu.read_byte(self.registers.sp);
+                    self.registers.sp += 1;
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.pc = self.registers.get_wz();
+                    Ok(false)
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+
+            // stack
+            Instruction::push_r16stk { operand } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                1 => {
+                    mmu.write_byte(
+                        self.registers.sp,
+                        (self.registers.get_stack_operand(operand) >> 8) as u8,
+                    );
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                2 => {
+                    mmu.write_byte(
+                        self.registers.sp,
+                        (self.registers.get_stack_operand(operand) & 0x00FF) as u8,
+                    );
+                    Ok(false)
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::pop_r16stk { operand } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = mmu.read_byte(self.registers.sp);
+                    self.registers.sp += 1;
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = mmu.read_byte(self.registers.sp);
+                    self.registers.sp += 1;
+                    Ok(false)
+                },
+                2 => {
+                    self.registers
+                        .set_stack_operand(operand, self.registers.get_wz());
+                    Ok(true)
+                },
                 _ => panic_execuction!(),
             },
 

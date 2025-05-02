@@ -1,3 +1,5 @@
+use super::timer::TimerRegisters;
+
 pub mod mbc;
 pub mod mmu;
 
@@ -23,6 +25,13 @@ pub(super) const UNUSABLE_ADDR: u16 = OAM_ADDR + (OAM_SIZE as u16);
 pub(super) const IO_REGISTERS_ADDR: u16 = UNUSABLE_ADDR + (UNUSABLE_SIZE as u16);
 pub(super) const H_RAM_ADDR: u16 = IO_REGISTERS_ADDR + (IO_REGISTERS_SIZE as u16);
 pub(super) const IE_REGISTER_ADDR: u16 = H_RAM_ADDR + (H_RAM_SIZE as u16);
+
+#[derive(Default)]
+pub struct IoRegisters {
+    interrupt_flags: u8,
+    interrupt_enable: u8,
+    timer: TimerRegisters,
+}
 
 #[cfg(test)]
 mod tests {

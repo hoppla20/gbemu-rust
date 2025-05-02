@@ -23,6 +23,8 @@ pub struct Cpu {
 
     current_instruction: Instruction,
     current_instruction_cycle: u8,
+
+    interrupt_enabled: bool,
 }
 
 impl Cpu {
@@ -32,6 +34,8 @@ impl Cpu {
 
             current_instruction: Instruction::nop,
             current_instruction_cycle: 0,
+
+            interrupt_enabled: false,
         };
 
         result.trace_state(mmu);
@@ -43,11 +47,11 @@ impl Cpu {
         result
     }
 
-    pub fn new(mmu: &Mmu) -> Self {
+    pub fn new_zeroed(mmu: &Mmu) -> Self {
         Cpu::new_from_registers(mmu, Registers::default())
     }
 
-    pub fn new_dmg(mmu: &Mmu) -> Self {
+    pub fn new(mmu: &Mmu) -> Self {
         Cpu::new_from_registers(
             mmu,
             Registers {
@@ -67,6 +71,7 @@ impl Cpu {
                 z: 0x00,
                 pc: 0x0100,
                 sp: 0xfffe,
+                cc: false,
             },
         )
     }

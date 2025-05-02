@@ -1,3 +1,5 @@
+use super::instructions::{Condition, MemoryOperand16, StackOperand16};
+
 const FLAG_ZERO_BYTE_POS: u8 = 7;
 const FLAG_SUBTRACTION_BYTE_POS: u8 = 6;
 const FLAG_HALF_CARRY_BYTE_POS: u8 = 5;
@@ -39,6 +41,7 @@ pub struct Registers {
     pub z: u8,
     pub sp: u16,
     pub pc: u16,
+    pub cc: bool,
 }
 
 impl Registers {
@@ -166,6 +169,50 @@ impl Registers {
             self.f |= 1 << FLAG_CARRY_BYTE_POS;
         } else {
             self.f &= !(1 << FLAG_CARRY_BYTE_POS);
+        }
+    }
+
+    pub fn check_condition(&mut self, condition: Condition) {
+        match condition {
+            Condition::NZ => self.cc = !self.get_flag_zero(),
+            Condition::Z => self.cc = self.get_flag_zero(),
+            Condition::NC => self.cc = !self.get_flag_carry(),
+            Condition::C => self.cc = self.get_flag_carry(),
+        }
+    }
+
+    pub fn get_memory_operand(&mut self, operand: MemoryOperand16) -> u16 {
+        match operand {
+            MemoryOperand16::BC => self.get_bc(),
+            MemoryOperand16::DE => self.get_de(),
+            MemoryOperand16::HLI => {
+                let result = self.get_hl();
+                self.set_hl(self.get_hl().overflowing_add(1).0);
+                result
+            },
+            MemoryOperand16::HLD => {
+                let result = self.get_hl();
+                self.set_hl(self.get_hl().overflowing_sub(1).0);
+                result
+            },
+        }
+    }
+
+    pub fn get_stack_operand(&self, operand: StackOperand16) -> u16 {
+        match operand {
+            StackOperand16::BC => self.get_bc(),
+            StackOperand16::DE => self.get_de(),
+            StackOperand16::HL => self.get_hl(),
+            StackOperand16::AF => self.get_af(),
+        }
+    }
+
+    pub fn set_stack_operand(&mut self, operand: StackOperand16, value: u16) {
+        match operand {
+            StackOperand16::BC => self.set_bc(value),
+            StackOperand16::DE => self.set_de(value),
+            StackOperand16::HL => self.set_hl(value),
+            StackOperand16::AF => self.set_af(value),
         }
     }
 }

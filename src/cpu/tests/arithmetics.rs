@@ -34,8 +34,8 @@ fn test_arithmetics_simple() {
     ];
 
     let mbc = Mbc0::new_from_buffer(&instructions, false);
-    let mut mmu = Mmu::new(Box::new(mbc), false);
-    let mut cpu = Cpu::new(&mmu);
+    let mut mmu = Mmu::new(Box::new(mbc));
+    let mut cpu = Cpu::new_zeroed(&mmu);
 
     cpu.registers.a = 0b10;
     cpu.registers.b = 0b01;
