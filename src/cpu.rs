@@ -1,5 +1,6 @@
 mod alu;
 mod instructions;
+mod interrupts;
 
 pub mod registers;
 
@@ -25,6 +26,7 @@ pub struct Cpu {
     current_instruction_cycle: u8,
 
     interrupt_enabled: bool,
+    interrupt_enable_pending: bool,
 }
 
 impl Cpu {
@@ -36,6 +38,7 @@ impl Cpu {
             current_instruction_cycle: 0,
 
             interrupt_enabled: false,
+            interrupt_enable_pending: false,
         };
 
         result.trace_state(mmu);
@@ -86,18 +89,27 @@ impl Cpu {
     pub fn step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
         let completed = self.instruction_step(mmu)?;
 
+        if self.interrupt_enable_pending {
+            self.interrupt_enabled = self.interrupt_enable_pending;
+            self.interrupt_enable_pending = false;
+        }
+
         if completed {
             self.trace_state(mmu);
 
-            let opcode = self.read_byte_pc(mmu);
+            if let Some(interrupt) = self.interrupt_check(mmu) {
+                self.current_instruction = Instruction::isr { interrupt };
+            } else {
+                let opcode = self.read_byte_pc(mmu);
 
-            debug!("Decoding opcode 0x{:02X}", opcode);
+                debug!("Decoding opcode 0x{:02X}", opcode);
 
-            match self.current_instruction {
-                Instruction::prefix => {
-                    self.current_instruction = Instruction::decode_prefix_instruction(opcode);
-                },
-                _ => self.current_instruction = Instruction::decode_instruction(opcode),
+                match self.current_instruction {
+                    Instruction::prefix => {
+                        self.current_instruction = Instruction::decode_prefix_instruction(opcode);
+                    },
+                    _ => self.current_instruction = Instruction::decode_instruction(opcode),
+                }
             }
 
             debug!("Decoded instruction {:02X?}", self.current_instruction);

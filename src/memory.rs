@@ -28,10 +28,10 @@ pub(super) const IE_REGISTER_ADDR: u16 = H_RAM_ADDR + (H_RAM_SIZE as u16);
 
 #[derive(Default)]
 pub struct IoRegisters {
-    interrupt_flags: u8,
-    interrupt_enable: u8,
-    timer: TimerRegisters,
-    serial_transfer_control: u8,
+    pub interrupt_flags: u8,
+    pub interrupt_enable: u8,
+    pub timer: TimerRegisters,
+    pub serial_transfer_control: u8,
 }
 
 #[cfg(test)]

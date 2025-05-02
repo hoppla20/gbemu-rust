@@ -28,8 +28,8 @@ fn test_blargg(file_path: &str) {
     let mut cpu = Cpu::new(&mmu);
 
     let mut cycle = 0;
-    let re_failed = Regex::new("^Failed .*$").unwrap();
-    let re_passed = Regex::new("^Passed$").unwrap();
+    let re_failed = Regex::new(r"^Failed .*$").unwrap();
+    let re_passed = Regex::new(r"^Passed$").unwrap();
     loop {
         cycle += 1;
         if let Err(err) = cpu.step(&mut mmu) {
@@ -37,9 +37,9 @@ fn test_blargg(file_path: &str) {
             break;
         }
 
-        assert!(!re_failed.is_match(mmu.serial.get_buffer()));
+        assert!(!re_failed.is_match(mmu.serial.get_last_buffer()));
 
-        if re_passed.is_match(mmu.serial.get_buffer()) {
+        if re_passed.is_match(mmu.serial.get_last_buffer()) {
             info!("Tests passed!");
             break;
         }
@@ -78,7 +78,6 @@ fn test_blargg_cpu_instrs_01() {
 }
 
 #[test]
-#[ignore = "not finished"]
 fn test_blargg_cpu_instrs_02() {
     test_blargg("test_roms/blargg/cpu_instrs/individual/02-interrupts.gb");
 }

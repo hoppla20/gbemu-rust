@@ -4,13 +4,14 @@ pub trait Serial {
     fn write(&mut self, c: char);
     fn transfer(&mut self, serial_transfer_control: &mut u8);
     fn read(&self) -> u8;
-    fn get_buffer(&self) -> &String;
+    fn get_last_buffer(&self) -> &String;
 }
 
 #[derive(Default)]
 pub struct LogSerial {
     current: char,
     buffer: String,
+    last_buffer: String,
 }
 
 impl Serial for LogSerial {
@@ -21,6 +22,7 @@ impl Serial for LogSerial {
     fn transfer(&mut self, serial_transfer_control: &mut u8) {
         if self.current == '\n' {
             debug!("Serial output: '{}'", self.buffer);
+            self.last_buffer = self.buffer.clone();
             self.buffer.clear();
         } else {
             self.buffer.push(self.current);
@@ -35,7 +37,7 @@ impl Serial for LogSerial {
         0xFF
     }
 
-    fn get_buffer(&self) -> &String {
-        &self.buffer
+    fn get_last_buffer(&self) -> &String {
+        &self.last_buffer
     }
 }
