@@ -1,11 +1,12 @@
 mod alu;
 mod instructions;
 
-use lazy_static::lazy_static;
-
 pub mod registers;
 
+use std::fmt::Debug;
+
 use instructions::Instruction;
+use log::{debug, trace};
 use registers::Registers;
 
 use crate::memory::mmu::Mmu;
@@ -24,27 +25,6 @@ pub struct Cpu {
     current_instruction_cycle: u8,
 }
 
-lazy_static! {
-    static ref INSTRUCTION_LOOKUP: [Instruction; 0x100] = {
-        let mut instrs = [Instruction::unknown_opcode { opcode: 0 }; 0x100];
-
-        for (i, instr) in instrs.iter_mut().enumerate() {
-            *instr = Instruction::decode_instruction(i as u8);
-        }
-
-        instrs
-    };
-    static ref PREFIX_INSTRUCTION_LOOKUP: [Instruction; 0x100] = {
-        let mut instrs = [Instruction::unknown_opcode { opcode: 0 }; 0x100];
-
-        for (i, instr) in instrs.iter_mut().enumerate() {
-            *instr = Instruction::decode_prefix_instruction(i as u8);
-        }
-
-        instrs
-    };
-}
-
 impl Cpu {
     pub fn new_from_registers(mmu: &Mmu, registers: Registers) -> Self {
         let mut result = Cpu {
@@ -54,8 +34,11 @@ impl Cpu {
             current_instruction_cycle: 0,
         };
 
+        result.trace_state(mmu);
+
         result.current_instruction =
             Instruction::decode_instruction(mmu.read_byte(result.registers.pc));
+        (result.registers.pc, _) = result.registers.pc.overflowing_add(1);
 
         result
     }
@@ -64,51 +47,55 @@ impl Cpu {
         Cpu::new_from_registers(mmu, Registers::default())
     }
 
-    pub fn new_dmg(mmu: &Mmu, carry_flags: bool) -> Self {
-        let mut result = Cpu::new_from_registers(
+    pub fn new_dmg(mmu: &Mmu) -> Self {
+        Cpu::new_from_registers(
             mmu,
             Registers {
                 a: 0x01,
-                f: 0x00,
+                f: if mmu.read_byte(0x14D) == 0x00 {
+                    0b10000000
+                } else {
+                    0b10110000
+                },
                 b: 0x00,
                 c: 0x13,
                 d: 0x00,
                 e: 0xD8,
                 h: 0x01,
                 l: 0x4D,
+                w: 0x00,
                 z: 0x00,
                 pc: 0x0100,
                 sp: 0xfffe,
             },
-        );
+        )
+    }
 
-        result.registers.set_flag_zero(true);
-        result.registers.set_flag_subtraction(false);
-        result.registers.set_flag_half_carry(carry_flags);
-        result.registers.set_flag_carry(carry_flags);
+    pub fn read_byte_pc(&mut self, mmu: &mut Mmu) -> u8 {
+        let byte = mmu.read_byte(self.registers.pc);
+        (self.registers.pc, _) = self.registers.pc.overflowing_add(1);
 
-        result
+        byte
     }
 
     pub fn step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
         let completed = self.instruction_step(mmu)?;
 
         if completed {
-            self.registers.pc += 1;
-            let opcode = mmu.read_byte(self.registers.pc);
+            self.trace_state(mmu);
 
-            #[cfg(test)]
-            println!("Decoding opcode 0x{:02X}", opcode);
+            let opcode = self.read_byte_pc(mmu);
+
+            debug!("Decoding opcode 0x{:02X}", opcode);
 
             match self.current_instruction {
                 Instruction::prefix => {
-                    self.current_instruction = PREFIX_INSTRUCTION_LOOKUP[opcode as usize];
+                    self.current_instruction = Instruction::decode_prefix_instruction(opcode);
                 },
-                _ => self.current_instruction = INSTRUCTION_LOOKUP[opcode as usize],
+                _ => self.current_instruction = Instruction::decode_instruction(opcode),
             }
 
-            #[cfg(test)]
-            println!("Decoded instruction {:02X?}", self.current_instruction);
+            debug!("Decoded instruction {:02X?}", self.current_instruction);
 
             self.current_instruction_cycle = 0;
         } else {
@@ -118,6 +105,37 @@ impl Cpu {
         }
 
         Ok(completed)
+    }
+
+    pub fn trace_state(&self, mmu: &Mmu) {
+        trace!(
+            "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+            self,
+            mmu.read_byte(self.registers.pc),
+            mmu.read_byte(self.registers.pc.overflowing_add(1).0),
+            mmu.read_byte(self.registers.pc.overflowing_add(2).0),
+            mmu.read_byte(self.registers.pc.overflowing_add(3).0)
+        )
+    }
+}
+
+impl Debug for Cpu {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(
+            format_args!(
+                "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X}",
+                self.registers.a,
+                self.registers.f,
+                self.registers.b,
+                self.registers.c,
+                self.registers.d,
+                self.registers.e,
+                self.registers.h,
+                self.registers.l,
+                self.registers.sp,
+                self.registers.pc,
+            )
+        )
     }
 }
 

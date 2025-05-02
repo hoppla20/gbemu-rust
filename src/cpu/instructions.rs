@@ -31,20 +31,21 @@ pub enum ArithmeticOperand {
     A,
 }
 
-impl TryFrom<u8> for ArithmeticOperand {
-    type Error = DecodeError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+impl From<u8> for ArithmeticOperand {
+    fn from(value: u8) -> Self {
         match value {
-            x if x == ArithmeticOperand::B as u8 => Ok(ArithmeticOperand::B),
-            x if x == ArithmeticOperand::C as u8 => Ok(ArithmeticOperand::C),
-            x if x == ArithmeticOperand::D as u8 => Ok(ArithmeticOperand::D),
-            x if x == ArithmeticOperand::E as u8 => Ok(ArithmeticOperand::E),
-            x if x == ArithmeticOperand::H as u8 => Ok(ArithmeticOperand::H),
-            x if x == ArithmeticOperand::L as u8 => Ok(ArithmeticOperand::L),
-            x if x == ArithmeticOperand::IND_HL as u8 => Ok(ArithmeticOperand::IND_HL),
-            x if x == ArithmeticOperand::A as u8 => Ok(ArithmeticOperand::A),
-            _ => Err(DecodeError::UnknownOperand { operand: value }),
+            x if x == ArithmeticOperand::B as u8 => ArithmeticOperand::B,
+            x if x == ArithmeticOperand::C as u8 => ArithmeticOperand::C,
+            x if x == ArithmeticOperand::D as u8 => ArithmeticOperand::D,
+            x if x == ArithmeticOperand::E as u8 => ArithmeticOperand::E,
+            x if x == ArithmeticOperand::H as u8 => ArithmeticOperand::H,
+            x if x == ArithmeticOperand::L as u8 => ArithmeticOperand::L,
+            x if x == ArithmeticOperand::IND_HL as u8 => ArithmeticOperand::IND_HL,
+            x if x == ArithmeticOperand::A as u8 => ArithmeticOperand::A,
+            _ => panic!(
+                "Unknown arithmetic operand '{:02X}' while decoding instruction!",
+                value
+            ),
         }
     }
 }
@@ -58,16 +59,17 @@ pub enum ArithmeticOperand16 {
     SP,
 }
 
-impl TryFrom<u8> for ArithmeticOperand16 {
-    type Error = DecodeError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+impl From<u8> for ArithmeticOperand16 {
+    fn from(value: u8) -> Self {
         match value {
-            x if x == ArithmeticOperand16::BC as u8 => Ok(ArithmeticOperand16::BC),
-            x if x == ArithmeticOperand16::DE as u8 => Ok(ArithmeticOperand16::DE),
-            x if x == ArithmeticOperand16::HL as u8 => Ok(ArithmeticOperand16::HL),
-            x if x == ArithmeticOperand16::SP as u8 => Ok(ArithmeticOperand16::SP),
-            _ => Err(DecodeError::UnknownOperand { operand: value }),
+            x if x == ArithmeticOperand16::BC as u8 => ArithmeticOperand16::BC,
+            x if x == ArithmeticOperand16::DE as u8 => ArithmeticOperand16::DE,
+            x if x == ArithmeticOperand16::HL as u8 => ArithmeticOperand16::HL,
+            x if x == ArithmeticOperand16::SP as u8 => ArithmeticOperand16::SP,
+            _ => panic!(
+                "Unknown 16-bit arithmetic operand '{:02X}' while decoding instruction!",
+                value
+            ),
         }
     }
 }
@@ -81,16 +83,17 @@ pub enum MemoryOperand16 {
     HLD,
 }
 
-impl TryFrom<u8> for MemoryOperand16 {
-    type Error = DecodeError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+impl From<u8> for MemoryOperand16 {
+    fn from(value: u8) -> Self {
         match value {
-            x if x == MemoryOperand16::BC as u8 => Ok(MemoryOperand16::BC),
-            x if x == MemoryOperand16::DE as u8 => Ok(MemoryOperand16::DE),
-            x if x == MemoryOperand16::HLI as u8 => Ok(MemoryOperand16::HLI),
-            x if x == MemoryOperand16::HLD as u8 => Ok(MemoryOperand16::HLD),
-            _ => Err(DecodeError::UnknownOperand { operand: value }),
+            x if x == MemoryOperand16::BC as u8 => MemoryOperand16::BC,
+            x if x == MemoryOperand16::DE as u8 => MemoryOperand16::DE,
+            x if x == MemoryOperand16::HLI as u8 => MemoryOperand16::HLI,
+            x if x == MemoryOperand16::HLD as u8 => MemoryOperand16::HLD,
+            _ => panic!(
+                "Unknown memory operand '{:02X}' while decoding instruction!",
+                value
+            ),
         }
     }
 }
@@ -104,16 +107,17 @@ pub enum StackOperand16 {
     AF,
 }
 
-impl TryFrom<u8> for StackOperand16 {
-    type Error = DecodeError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+impl From<u8> for StackOperand16 {
+    fn from(value: u8) -> Self {
         match value {
-            x if x == StackOperand16::BC as u8 => Ok(StackOperand16::BC),
-            x if x == StackOperand16::DE as u8 => Ok(StackOperand16::DE),
-            x if x == StackOperand16::HL as u8 => Ok(StackOperand16::HL),
-            x if x == StackOperand16::AF as u8 => Ok(StackOperand16::AF),
-            _ => Err(DecodeError::UnknownOperand { operand: value }),
+            x if x == StackOperand16::BC as u8 => StackOperand16::BC,
+            x if x == StackOperand16::DE as u8 => StackOperand16::DE,
+            x if x == StackOperand16::HL as u8 => StackOperand16::HL,
+            x if x == StackOperand16::AF as u8 => StackOperand16::AF,
+            _ => panic!(
+                "Unknown condition '{:02X}' while decoding instruction!",
+                value
+            ),
         }
     }
 }
@@ -127,16 +131,17 @@ pub enum Condition {
     C,
 }
 
-impl TryFrom<u8> for Condition {
-    type Error = DecodeError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+impl From<u8> for Condition {
+    fn from(value: u8) -> Self {
         match value {
-            x if x == Condition::NZ as u8 => Ok(Condition::NZ),
-            x if x == Condition::Z as u8 => Ok(Condition::Z),
-            x if x == Condition::NC as u8 => Ok(Condition::NC),
-            x if x == Condition::C as u8 => Ok(Condition::C),
-            _ => Err(DecodeError::UnknownOperand { operand: value }),
+            x if x == Condition::NZ as u8 => Condition::NZ,
+            x if x == Condition::Z as u8 => Condition::Z,
+            x if x == Condition::NC as u8 => Condition::NC,
+            x if x == Condition::C as u8 => Condition::C,
+            _ => panic!(
+                "Unknown condition '{:02X}' while decoding instruction!",
+                value
+            ),
         }
     }
 }
@@ -144,7 +149,12 @@ impl TryFrom<u8> for Condition {
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
+    // special
     nop,
+    stop,
+    halt,
+    di,
+    ei,
 
     // 8-bit arithmetics
     add_a_r8 {
@@ -177,30 +187,15 @@ pub enum Instruction {
     dec_r8 {
         operand: ArithmeticOperand,
     },
-    add_a_n8 {
-        immediate: u8,
-    },
-    adc_a_n8 {
-        immediate: u8,
-    },
-    sub_a_n8 {
-        immediate: u8,
-    },
-    sbc_a_n8 {
-        immediate: u8,
-    },
-    and_a_n8 {
-        immediate: u8,
-    },
-    xor_a_n8 {
-        immediate: u8,
-    },
-    or_a_n8 {
-        immediate: u8,
-    },
-    cp_a_n8 {
-        immediate: u8,
-    },
+    add_a_n8,
+    adc_a_n8,
+    sub_a_n8,
+    sbc_a_n8,
+    and_a_n8,
+    xor_a_n8,
+    or_a_n8,
+    cp_a_n8,
+    add_sp_n8,
     cpl,
     daa,
 
@@ -267,17 +262,21 @@ pub enum Instruction {
     // 8-bit load operations
     ld_r8_n8 {
         operand: ArithmeticOperand,
-        immediate: u8,
     },
     ld_r8_r8 {
         operand_a: ArithmeticOperand,
         operand_b: ArithmeticOperand,
     },
+    ld_ind_n16_a,
+    ld_a_ind_n16,
+    ldh_ind_c_a,
+    ldh_a_ind_c,
+    ldh_ind_n8_a,
+    ldh_a_ind_n8,
 
     // 16-bit load operations
     ld_r16_n16 {
         operand: ArithmeticOperand16,
-        immediate: u16,
     },
     ld_ind_r16mem_a {
         operand: MemoryOperand16,
@@ -285,31 +284,26 @@ pub enum Instruction {
     ld_a_ind_r16mem {
         operand: MemoryOperand16,
     },
+    ld_ind_n16_sp,
+    ld_sp_hl,
+    ld_hl_sp_n8,
 
     // jumps
-    jr_n8 {
-        immediate: u8,
-    },
+    jr_n8,
     jr_cond_n8 {
         condition: Condition,
-        immediate: u8,
     },
-    jp_n16 {
-        immediate: u16,
-    },
-    jp_hl {
-        immediate: u16,
-    },
+    jp_n16,
+    jp_hl,
     jp_cond_n16 {
         condition: Condition,
-        immediate: u16,
     },
-    call_n16 {
-        immediate: u16,
-    },
+    call_n16,
     call_cond_n16 {
         condition: Condition,
-        immediate: u16,
+    },
+    rst_tgt3 {
+        target_address: u16,
     },
     ret,
     reti,
@@ -325,10 +319,6 @@ pub enum Instruction {
         operand: StackOperand16,
     },
 
-    // special
-    halt,
-    stop,
-
     // errors
     unknown_opcode {
         opcode: u8,
@@ -338,151 +328,202 @@ pub enum Instruction {
     },
 }
 
-macro_rules! arithmetic_operand_0_2 {
-    ($opcode:ident) => {
-        extract_bits!($opcode: u8, 0, 2).try_into().unwrap()
-    };
-}
-
-macro_rules! arithmetic_operand_3_5 {
-    ($opcode:ident) => {
-        extract_bits!($opcode: u8, 3, 5).try_into().unwrap()
-    };
-}
-
-macro_rules! arithmetic_operand_16_4_5 {
-    ($opcode:ident) => {
-        extract_bits!($opcode: u8, 4, 5).try_into().unwrap()
-    };
-}
-
 impl Instruction {
     pub(super) fn decode_prefix_instruction(opcode: u8) -> Self {
         match extract_bits!(opcode: u8, 6, 7) {
             0b00 => match extract_bits!(opcode: u8, 3, 5) {
                 0b000 => Self::rlc_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
                 0b001 => Self::rrc_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
                 0b010 => Self::rl_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
                 0b011 => Self::rr_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
                 0b100 => Self::sla_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
                 0b101 => Self::sra_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
                 0b110 => Self::swap_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
                 0b111 => Self::srl_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
+                    operand: extract_bits!(opcode:u8,0,2).into(),
                 },
-                _ => Self::unknown_opcode { opcode },
+                _ => panic!(
+                    "Something went wrong while decoding prefix instruction {:02X}!",
+                    opcode
+                ),
             },
             0b01 => Self::bit_b3_r8 {
-                operand: arithmetic_operand_0_2!(opcode),
+                operand: extract_bits!(opcode:u8,0,2).into(),
                 index: extract_bits!(opcode: u8, 3, 5),
             },
             0b10 => Self::res_b3_r8 {
-                operand: arithmetic_operand_0_2!(opcode),
+                operand: extract_bits!(opcode:u8,0,2).into(),
                 index: extract_bits!(opcode: u8, 3, 5),
             },
             0b11 => Self::set_b3_r8 {
-                operand: arithmetic_operand_0_2!(opcode),
+                operand: extract_bits!(opcode:u8,0,2).into(),
                 index: extract_bits!(opcode: u8, 3, 5),
             },
-            _ => Self::unknown_opcode { opcode },
+            _ => panic!(
+                "Something went wrong while decoding prefix instruction {:02X}!",
+                opcode
+            ),
         }
     }
 
     pub(super) fn decode_instruction(opcode: u8) -> Instruction {
-        if opcode == 0x00 {
-            return Self::nop;
-        }
+        match opcode {
+            0x00 => Self::nop,
+            0x10 => Self::stop,
+            0x76 => Self::halt,
+            0xCB => Self::prefix,
 
-        if opcode == 0b11001011 {
-            return Self::prefix;
-        }
+            0x01 | 0x11 | 0x21 | 0x31 => Self::ld_r16_n16 {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
+            },
 
-        match extract_bits!(opcode: u8, 6, 7) {
-            0b00 => match extract_bits!(opcode: u8, 0, 3) {
-                0b0011 => Self::inc_r16 {
-                    operand: arithmetic_operand_16_4_5!(opcode),
-                },
-                0b1011 => Self::dec_r16 {
-                    operand: arithmetic_operand_16_4_5!(opcode),
-                },
-                0b1001 => Self::add_hl_r16 {
-                    operand: arithmetic_operand_16_4_5!(opcode),
-                },
-                _ => match extract_bits!(opcode: u8, 0, 2) {
-                    0b100 => Self::inc_r8 {
-                        operand: arithmetic_operand_3_5!(opcode),
-                    },
-                    0b101 => Self::dec_r8 {
-                        operand: arithmetic_operand_3_5!(opcode),
-                    },
-                    0b111 => match extract_bits!(opcode: u8, 3, 5) {
-                        0b000 => Self::rla,
-                        0b001 => Self::rrca,
-                        0b010 => Self::rla,
-                        0b011 => Self::rra,
-                        0b100 => Self::daa,
-                        0b101 => Self::cpl,
-                        0b110 => Self::scf,
-                        0b111 => Self::ccf,
-                        _ => Self::unknown_opcode { opcode },
-                    },
-                    _ => Self::unknown_opcode { opcode },
-                },
+            0x09 | 0x19 | 0x29 | 0x39 => Self::add_hl_r16 {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
             },
-            0b01 => Self::unknown_opcode { opcode },
-            0b10 => match extract_bits!(opcode: u8, 3, 5) {
-                0b000 => Self::add_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                0b001 => Self::adc_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                0b010 => Self::sub_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                0b011 => Self::sbc_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                0b100 => Self::and_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                0b101 => Self::xor_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                0b110 => Self::or_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                0b111 => Self::cp_a_r8 {
-                    operand: arithmetic_operand_0_2!(opcode),
-                },
-                _ => Self::unknown_opcode { opcode },
+
+            0x02 | 0x12 | 0x22 | 0x32 => Self::ld_ind_r16mem_a {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
             },
-            0b11 => match extract_bits!(opcode: u8, 0, 5) {
-                0b000110 => Self::add_a_n8 { immediate: 0 },
-                0b001110 => Self::adc_a_n8 { immediate: 0 },
-                0b010110 => Self::sub_a_n8 { immediate: 0 },
-                0b011110 => Self::sbc_a_n8 { immediate: 0 },
-                0b100110 => Self::and_a_n8 { immediate: 0 },
-                0b101110 => Self::xor_a_n8 { immediate: 0 },
-                0b110110 => Self::or_a_n8 { immediate: 0 },
-                0b111110 => Self::cp_a_n8 { immediate: 0 },
-                _ => Self::unknown_opcode { opcode },
+
+            0x0A | 0x1A | 0x2A | 0x3A => Self::ld_a_ind_r16mem {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
             },
-            _ => Self::unknown_opcode { opcode },
+
+            0x03 | 0x13 | 0x23 | 0x33 => Self::inc_r16 {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
+            },
+
+            0x0B | 0x1B | 0x2B | 0x3B => Self::dec_r16 {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
+            },
+
+            0x04 | 0x0C | 0x14 | 0x1C | 0x24 | 0x2C | 0x34 | 0x3C => Self::inc_r8 {
+                operand: extract_bits!(opcode: u8, 3, 5).into(),
+            },
+
+            0x05 | 0x0D | 0x15 | 0x1D | 0x25 | 0x2D | 0x35 | 0x3D => Self::dec_r8 {
+                operand: extract_bits!(opcode: u8, 3, 5).into(),
+            },
+
+            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => Self::ld_r8_n8 {
+                operand: extract_bits!(opcode: u8, 3, 5).into(),
+            },
+
+            0x07 => Self::rlca,
+            0x0F => Self::rrca,
+            0x17 => Self::rla,
+            0x1F => Self::rra,
+
+            0x27 => Self::daa,
+            0x2F => Self::cpl,
+            0x37 => Self::scf,
+            0x3F => Self::ccf,
+
+            0x40 | 0x48 | 0x50 | 0x58 | 0x60 | 0x68 | 0x70 | 0x78 | 0x41 | 0x49 | 0x51 | 0x59
+            | 0x61 | 0x69 | 0x71 | 0x79 | 0x42 | 0x4A | 0x52 | 0x5A | 0x62 | 0x6A | 0x72 | 0x7A
+            | 0x43 | 0x4B | 0x53 | 0x5B | 0x63 | 0x6B | 0x73 | 0x7B | 0x44 | 0x4C | 0x54 | 0x5C
+            | 0x64 | 0x6C | 0x74 | 0x7C | 0x45 | 0x4D | 0x55 | 0x5D | 0x65 | 0x6D | 0x75 | 0x7D
+            | 0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x7E | 0x47 | 0x4F | 0x57 | 0x5F | 0x67
+            | 0x6F | 0x77 | 0x7F => Self::ld_r8_r8 {
+                operand_a: extract_bits!(opcode: u8, 3, 5).into(),
+                operand_b: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+
+            0x80..=0x87 => Self::add_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+            0x88..=0x8F => Self::adc_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+            0x90..=0x97 => Self::sub_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+            0x98..=0x9F => Self::sbc_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+            0xA0..=0xA7 => Self::and_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+            0xA8..=0xAF => Self::xor_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+            0xB0..=0xB7 => Self::or_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+            0xB8..=0xBF => Self::cp_a_r8 {
+                operand: extract_bits!(opcode: u8, 0, 2).into(),
+            },
+
+            0xC0 | 0xC8 | 0xD0 | 0xD8 => Self::ret_cond {
+                condition: extract_bits!(opcode: u8, 3, 4).into(),
+            },
+
+            0xE0 => Self::ldh_ind_n8_a,
+            0xF0 => Self::ldh_ind_n8_a,
+
+            0xE8 => Self::add_sp_n8,
+            0xF8 => Self::ld_hl_sp_n8,
+
+            0xC1 | 0xD1 | 0xE1 | 0xF1 => Self::pop_r16stk {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
+            },
+
+            0xC9 => Self::ret,
+            0xD9 => Self::reti,
+            0xE9 => Self::jp_hl,
+            0xF9 => Self::ld_sp_hl,
+
+            0xC2 | 0xCA | 0xD2 | 0xDA => Self::jp_cond_n16 {
+                condition: extract_bits!(opcode: u8, 3, 4).into(),
+            },
+
+            0xE2 => Self::ldh_ind_c_a,
+            0xEA => Self::ld_ind_n16_a,
+            0xF2 => Self::ldh_a_ind_c,
+            0xFA => Self::ld_a_ind_n16,
+
+            0xC3 => Self::jp_n16,
+            0xF3 => Self::di,
+            0xFB => Self::ei,
+
+            0xC4 | 0xCC | 0xD4 | 0xDC => Self::call_cond_n16 {
+                condition: extract_bits!(opcode: u8, 3, 4).into(),
+            },
+
+            0xC5 | 0xD5 | 0xE5 | 0xF5 => Self::push_r16stk {
+                operand: extract_bits!(opcode: u8, 4, 5).into(),
+            },
+
+            0xCD => Self::call_n16,
+
+            0xC6 => Self::add_a_n8,
+            0xCE => Self::adc_a_n8,
+            0xD6 => Self::sub_a_n8,
+            0xDE => Self::sbc_a_n8,
+            0xE6 => Self::and_a_n8,
+            0xEE => Self::xor_a_n8,
+            0xF6 => Self::or_a_n8,
+            0xFE => Self::cp_a_n8,
+
+            0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => Self::rst_tgt3 {
+                target_address: (extract_bits!(opcode: u8, 3, 4) as u16) * 8,
+            },
+
+            _ => Instruction::unknown_opcode { opcode },
         }
     }
 }
@@ -692,6 +733,25 @@ impl Cpu {
                     },
                     _ => panic_execuction!(),
                 }
+            },
+
+            // jumps
+            Instruction::jp_n16 => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    (self.registers.pc, _) = self.registers.pc.overflowing_add(1);
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.pc = self.registers.get_wz();
+                    Ok(false)
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
             },
 
             _ => Err(ExecutionError::NoImpl {

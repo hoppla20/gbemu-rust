@@ -1,3 +1,9 @@
 [submodule "test_roms/gb-test-roms"]
 	path = test_roms/blargg
 	url = https://github.com/retrio/gb-test-roms.git
+[submodule "misc/bootix"]
+	path = misc/bootix
+	url = https://github.com/Hacktix/Bootix.git
+[submodule "external/gameboy-doctor"]
+	path = external/gameboy-doctor
+	url = https://github.com/robert/gameboy-doctor.git

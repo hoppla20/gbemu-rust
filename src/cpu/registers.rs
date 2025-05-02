@@ -13,6 +13,7 @@ pub enum Register {
     E,
     H,
     L,
+    W,
     Z,
 }
 
@@ -34,6 +35,7 @@ pub struct Registers {
     pub e: u8,
     pub h: u8,
     pub l: u8,
+    pub w: u8,
     pub z: u8,
     pub sp: u16,
     pub pc: u16,
@@ -50,6 +52,7 @@ impl Registers {
             Register::E => self.e,
             Register::H => self.h,
             Register::L => self.l,
+            Register::W => self.w,
             Register::Z => self.z,
         }
     }
@@ -63,6 +66,7 @@ impl Registers {
             Register::E => self.e = value,
             Register::H => self.h = value,
             Register::L => self.l = value,
+            Register::W => panic!("Writing into register W is not allowed with this method!"),
             Register::Z => panic!("Writing into register Z is not allowed with this method!"),
         }
     }
@@ -97,6 +101,14 @@ impl Registers {
     pub fn set_hl(&mut self, value: u16) {
         self.h = (value >> 8) as u8;
         self.l = (value & 0xFF) as u8;
+    }
+
+    pub fn get_wz(&self) -> u16 {
+        (self.w as u16) << 8 | self.z as u16
+    }
+    pub fn set_wz(&mut self, value: u16) {
+        self.w = (value >> 8) as u8;
+        self.z = (value & 0xFF) as u8;
     }
 
     pub fn get_double_register(&self, register: Register16) -> u16 {
