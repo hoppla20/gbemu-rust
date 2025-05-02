@@ -4,17 +4,18 @@ use std::{
     process::Command,
 };
 
-use log::{error, info, warn};
+use log::{info, warn};
+use regex::Regex;
 
 use crate::{
     cpu::Cpu,
+    serial::LogSerial,
     tests::{Mbc0, Mmu, setup_logger},
 };
 
 #[test]
-#[ignore = "manual only"]
 fn test_blargg_cpu_instrs_01() {
-    let _guards = setup_logger();
+    setup_logger();
 
     let f = File::open("test_roms/blargg/cpu_instrs/individual/01-special.gb").unwrap();
     let mut reader = BufReader::new(f);
@@ -22,15 +23,25 @@ fn test_blargg_cpu_instrs_01() {
     reader.read_to_end(&mut rom).unwrap();
 
     let mbc = Mbc0::new_from_buffer(&rom, false);
-    let mut mmu = Mmu::new(Box::new(mbc));
+    let serial = LogSerial::default();
+    let mut mmu = Mmu::new(Box::new(mbc), Box::new(serial));
     mmu.graphics.registers.lcd_y = 0x90;
     let mut cpu = Cpu::new(&mmu);
 
     let mut cycle = 0;
+    let re_failed = Regex::new("^Failed .*$").unwrap();
+    let re_passed = Regex::new("^Passed$").unwrap();
     loop {
         cycle += 1;
         if let Err(err) = cpu.step(&mut mmu) {
             warn!("Encountered error on cycle {}: {:02X?}", cycle, err);
+            break;
+        }
+
+        assert!(!re_failed.is_match(mmu.serial.get_buffer()));
+
+        if re_passed.is_match(mmu.serial.get_buffer()) {
+            info!("Tests passed!");
             break;
         }
     }
@@ -49,13 +60,15 @@ fn test_blargg_cpu_instrs_01() {
             .expect("Could not execute gameboy-doctor");
 
         if gd_command.status.success() {
-            info!("{}", String::from_utf8(gd_command.stdout).unwrap());
+            info!(
+                "Gameboy-doctor passed:\n{}",
+                String::from_utf8(gd_command.stdout).unwrap()
+            );
         } else {
-            error!(
+            panic!(
                 "Gameboy-doctor failed:\n{}",
                 String::from_utf8(gd_command.stdout).unwrap()
             );
-            panic!("Gameboy-doctor failed");
         }
     };
 }

@@ -1,5 +1,7 @@
 use log::debug;
 
+use crate::serial::Serial;
+
 use super::mbc::Mbc;
 
 use super::super::graphics::GraphicsState;
@@ -19,10 +21,11 @@ pub struct Mmu {
 
     pub io: IoRegisters,
     pub graphics: GraphicsState,
+    pub serial: Box<dyn Serial>,
 }
 
 impl Mmu {
-    pub fn new(mbc: Box<dyn Mbc + 'static>) -> Self {
+    pub fn new(mbc: Box<dyn Mbc + 'static>, serial: Box<dyn Serial>) -> Self {
         Mmu {
             oam_transfer: false,
 
@@ -32,6 +35,7 @@ impl Mmu {
 
             io: IoRegisters::default(),
             graphics: GraphicsState::default(),
+            serial,
         }
     }
 
@@ -86,21 +90,18 @@ impl Mmu {
             // io registers
 
             match address {
-                0xFF04 => {
-                    return self.io.timer.divider;
-                },
-                0xFF05 => {
-                    return self.io.timer.counter;
-                },
-                0xFF06 => {
-                    return self.io.timer.modulo;
-                },
-                0xFF07 => {
-                    return self.io.timer.control;
-                },
-                0xFF0F => {
-                    return self.io.interrupt_flags;
-                },
+                // serial
+                0xFF01 => return self.serial.read(),
+                0xFF02 => return self.io.serial_transfer_control,
+
+                //timer
+                0xFF04 => return self.io.timer.divider,
+                0xFF05 => return self.io.timer.counter,
+                0xFF06 => return self.io.timer.modulo,
+                0xFF07 => return self.io.timer.control,
+
+                // interrupt
+                0xFF0F => return self.io.interrupt_flags,
 
                 // TODO: audio
                 0xFF10..=0xFF26 => {
@@ -196,6 +197,17 @@ impl Mmu {
             // io registers
 
             match address {
+                // serial
+                0xFF01 => {
+                    self.serial.write(value as char);
+                    return;
+                },
+                0xFF02 => {
+                    self.serial.transfer(&mut self.io.serial_transfer_control);
+                    return;
+                },
+
+                // timer
                 0xFF04 => {
                     self.io.timer.divider = 0x00;
                     return;
@@ -212,6 +224,8 @@ impl Mmu {
                     self.io.timer.control = value;
                     return;
                 },
+
+                // interrupt
                 0xFF0F => {
                     self.io.interrupt_flags = value;
                     return;

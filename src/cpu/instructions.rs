@@ -1,3 +1,4 @@
+use core::panic;
 use std::fmt::Debug;
 
 use crate::memory::mmu::Mmu;
@@ -294,10 +295,10 @@ pub enum Instruction {
         condition: Condition,
     },
     jp_n16,
-    jp_hl,
     jp_cond_n16 {
         condition: Condition,
     },
+    jp_hl,
     call_n16,
     call_cond_n16 {
         condition: Condition,
@@ -553,12 +554,12 @@ macro_rules! instr_a_n8_match {
     ($self:ident, $instr:ident, $mmu:ident) => {
         match $self.current_instruction_cycle {
             0 => {
-                $self.registers.z = $mmu.read_byte($self.registers.pc);
-                Ok(())
+                $self.registers.z = $self.read_byte_pc($mmu);
+                Ok(false)
             },
             1 => {
                 $self.registers.$instr(ArithmeticOperand::IND_HL);
-                Ok(())
+                Ok(true)
             },
             _ => panic_execuction!(),
         }
@@ -648,6 +649,56 @@ impl Cpu {
             Instruction::dec_r8 { operand } => {
                 instr_r8_match!(self, operand, alu_dec_r8, mmu)
             },
+            Instruction::add_a_n8 => {
+                instr_a_n8_match!(self, alu_add_a_r8, mmu)
+            },
+            Instruction::adc_a_n8 => {
+                instr_a_n8_match!(self, alu_adc_a_r8, mmu)
+            },
+            Instruction::sub_a_n8 => {
+                instr_a_n8_match!(self, alu_sub_a_r8, mmu)
+            },
+            Instruction::sbc_a_n8 => {
+                instr_a_n8_match!(self, alu_sbc_a_r8, mmu)
+            },
+            Instruction::and_a_n8 => {
+                instr_a_n8_match!(self, alu_and_a_r8, mmu)
+            },
+            Instruction::xor_a_n8 => {
+                instr_a_n8_match!(self, alu_xor_a_r8, mmu)
+            },
+            Instruction::or_a_n8 => {
+                instr_a_n8_match!(self, alu_or_a_r8, mmu)
+            },
+            Instruction::cp_a_n8 => {
+                instr_a_n8_match!(self, alu_cp_a_r8, mmu)
+            },
+            Instruction::cpl => {
+                self.registers.alu_cpl_a();
+                Ok(true)
+            },
+            Instruction::daa => {
+                self.registers.alu_daa();
+                Ok(true)
+            },
+
+            // 8-bit rotation
+            Instruction::rlca => {
+                self.registers.alu_rlca();
+                Ok(true)
+            },
+            Instruction::rrca => {
+                self.registers.alu_rrca();
+                Ok(true)
+            },
+            Instruction::rla => {
+                self.registers.alu_rla();
+                Ok(true)
+            },
+            Instruction::rra => {
+                self.registers.alu_rra();
+                Ok(true)
+            },
 
             // 16-bit arithmetics
             Instruction::inc_r16 { operand } => match self.current_instruction_cycle {
@@ -702,6 +753,8 @@ impl Cpu {
             Instruction::prefix => Ok(true),
             Instruction::rlc_r8 { operand } => instr_r8_match!(self, operand, alu_rlc_r8, mmu),
             Instruction::rrc_r8 { operand } => instr_r8_match!(self, operand, alu_rrc_r8, mmu),
+            Instruction::rl_r8 { operand } => instr_r8_match!(self, operand, alu_rl_r8, mmu),
+            Instruction::rr_r8 { operand } => instr_r8_match!(self, operand, alu_rr_r8, mmu),
             Instruction::sla_r8 { operand } => instr_r8_match!(self, operand, alu_sla_r8, mmu),
             Instruction::sra_r8 { operand } => instr_r8_match!(self, operand, alu_sra_r8, mmu),
             Instruction::swap_r8 { operand } => instr_r8_match!(self, operand, alu_swap_r8, mmu),
@@ -784,10 +837,24 @@ impl Cpu {
                 operand_b,
             } => match self.current_instruction_cycle {
                 0 => {
-                    self.registers.set_arithmetic_target_r8(
-                        operand_a,
-                        self.registers.get_arithmetic_target_r8(operand_b),
-                    );
+                    let temp;
+                    match (operand_a, operand_b) {
+                        (ArithmeticOperand::IND_HL, ArithmeticOperand::IND_HL) => {
+                            panic_execuction!()
+                        },
+                        (_, ArithmeticOperand::IND_HL) => {
+                            temp = mmu.read_byte(self.registers.get_hl());
+                        },
+                        _ => {
+                            temp = self.registers.get_arithmetic_target_r8(operand_b);
+                        },
+                    }
+
+                    if let ArithmeticOperand::IND_HL = operand_a {
+                        mmu.write_byte(self.registers.get_hl(), temp);
+                    } else {
+                        self.registers.set_arithmetic_target_r8(operand_a, temp);
+                    }
                     Ok(true)
                 },
                 _ => panic_execuction!(),
@@ -806,6 +873,25 @@ impl Cpu {
                     Ok(false)
                 },
                 3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ld_a_ind_n16 => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.z = mmu.read_byte(self.registers.get_wz());
+                    Ok(false)
+                },
+                3 => {
+                    self.registers.a = self.registers.z;
+                    Ok(true)
+                },
                 _ => panic_execuction!(),
             },
             Instruction::ld_ind_r16mem_a { operand } => match self.current_instruction_cycle {
@@ -925,6 +1011,34 @@ impl Cpu {
                 3 => Ok(true),
                 _ => panic_execuction!(),
             },
+            Instruction::jp_cond_n16 { condition } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    self.registers.check_condition(condition);
+                    Ok(false)
+                },
+                2 => {
+                    if self.registers.cc {
+                        self.registers.pc = self.registers.get_wz();
+                        Ok(false)
+                    } else {
+                        Ok(true)
+                    }
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::jp_hl => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.pc = self.registers.get_hl();
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
             Instruction::call_n16 => match self.current_instruction_cycle {
                 0 => {
                     self.registers.z = self.read_byte_pc(mmu);
@@ -937,6 +1051,37 @@ impl Cpu {
                 2 => {
                     self.registers.sp -= 1;
                     Ok(false)
+                },
+                3 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc >> 8) as u8);
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                4 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc & 0x00FF) as u8);
+                    self.registers.pc = self.registers.get_wz();
+                    Ok(false)
+                },
+                5 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::call_cond_n16 { condition } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    self.registers.check_condition(condition);
+                    Ok(false)
+                },
+                2 => {
+                    if self.registers.cc {
+                        self.registers.sp -= 1;
+                        Ok(false)
+                    } else {
+                        Ok(true)
+                    }
                 },
                 3 => {
                     mmu.write_byte(self.registers.sp, (self.registers.pc >> 8) as u8);
@@ -969,11 +1114,37 @@ impl Cpu {
                 3 => Ok(true),
                 _ => panic_execuction!(),
             },
+            Instruction::ret_cond { condition } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.check_condition(condition);
+                    Ok(false)
+                },
+                1 => {
+                    if self.registers.cc {
+                        self.registers.z = mmu.read_byte(self.registers.sp);
+                        self.registers.sp += 1;
+                        Ok(false)
+                    } else {
+                        Ok(true)
+                    }
+                },
+                2 => {
+                    self.registers.w = mmu.read_byte(self.registers.sp);
+                    self.registers.sp += 1;
+                    Ok(false)
+                },
+                3 => {
+                    self.registers.pc = self.registers.get_wz();
+                    Ok(false)
+                },
+                4 => Ok(true),
+                _ => panic_execuction!(),
+            },
 
             // stack
             Instruction::push_r16stk { operand } => match self.current_instruction_cycle {
                 0 => {
-                    self.registers.sp -= 1;
+                    self.registers.sp = self.registers.sp.wrapping_sub(1);
                     Ok(false)
                 },
                 1 => {
@@ -981,7 +1152,7 @@ impl Cpu {
                         self.registers.sp,
                         (self.registers.get_stack_operand(operand) >> 8) as u8,
                     );
-                    self.registers.sp -= 1;
+                    self.registers.sp = self.registers.sp.wrapping_sub(1);
                     Ok(false)
                 },
                 2 => {
@@ -997,12 +1168,12 @@ impl Cpu {
             Instruction::pop_r16stk { operand } => match self.current_instruction_cycle {
                 0 => {
                     self.registers.z = mmu.read_byte(self.registers.sp);
-                    self.registers.sp += 1;
+                    self.registers.sp = self.registers.sp.wrapping_add(1);
                     Ok(false)
                 },
                 1 => {
                     self.registers.w = mmu.read_byte(self.registers.sp);
-                    self.registers.sp += 1;
+                    self.registers.sp = self.registers.sp.wrapping_add(1);
                     Ok(false)
                 },
                 2 => {

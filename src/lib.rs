@@ -7,6 +7,7 @@ mod utils;
 mod cpu;
 mod graphics;
 mod memory;
+mod serial;
 mod timer;
 
 pub mod prelude {

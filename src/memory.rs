@@ -31,6 +31,7 @@ pub struct IoRegisters {
     interrupt_flags: u8,
     interrupt_enable: u8,
     timer: TimerRegisters,
+    serial_transfer_control: u8,
 }
 
 #[cfg(test)]

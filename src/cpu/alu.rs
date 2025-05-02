@@ -205,13 +205,43 @@ impl Registers {
         self.a = !self.a;
     }
 
-    // rotation
-
-    pub fn alu_rra_a_r8(&mut self) {
-        self.alu_rr_r8(ArithmeticOperand::A);
+    pub fn alu_daa(&mut self) {
+        let mut overflow_1 = false;
+        let mut overflow_2 = false;
+        let mut temp = self.a as u16;
+        if self.get_flag_subtraction() {
+            if self.get_flag_half_carry() {
+                temp = temp.wrapping_sub(0x06);
+            }
+            if self.get_flag_carry() {
+                (temp, overflow_2) = temp.overflowing_sub(0x60);
+            }
+        } else {
+            if self.get_flag_half_carry() || (temp & 0x0F) > 0x09 {
+                temp += 0x06;
+                overflow_1 = temp >= 0x100;
+            }
+            if self.get_flag_carry() || temp > 0x9F {
+                temp += 0x60;
+                overflow_2 = temp >= 0x100;
+            }
+        }
+        self.set_flag_zero(temp as u8 == 0x00);
+        self.set_flag_half_carry(false);
+        if overflow_1 || overflow_2 {
+            self.set_flag_carry(true);
+        }
+        self.a = temp as u8;
     }
 
-    pub fn alu_rrca_a_r8(&mut self) {
+    // rotation
+
+    pub fn alu_rra(&mut self) {
+        self.alu_rr_r8(ArithmeticOperand::A);
+        self.set_flag_zero(false);
+    }
+
+    pub fn alu_rrca(&mut self) {
         self.alu_rrc_r8(ArithmeticOperand::A);
     }
 
@@ -230,11 +260,11 @@ impl Registers {
         result
     }
 
-    pub fn alu_rla_a_r8(&mut self) {
+    pub fn alu_rla(&mut self) {
         self.alu_rl_r8(ArithmeticOperand::A);
     }
 
-    pub fn alu_rlca_a_r8(&mut self) {
+    pub fn alu_rlca(&mut self) {
         self.alu_rlc_r8(ArithmeticOperand::A);
     }
 
@@ -659,7 +689,7 @@ mod tests {
             ..Registers::default()
         };
         registers.set_flag_carry(true);
-        registers.alu_rra_a_r8();
+        registers.alu_rra();
         assert_eq!(
             registers.a, 0xFF,
             "Register A's values should still be 0xFF!"
@@ -668,7 +698,7 @@ mod tests {
             registers.get_flag_carry(),
             "The carry flag should still be set!"
         );
-        registers.alu_rla_a_r8();
+        registers.alu_rla();
         assert_eq!(
             registers.a, 0xFF,
             "Register A's values should still be 0xFF!"
@@ -683,22 +713,22 @@ mod tests {
             ..Registers::default()
         };
         registers.set_flag_carry(true);
-        registers.alu_rra_a_r8();
+        registers.alu_rra();
         assert_eq!(
             registers.a, 0b10000000,
             "Register A's values is not correct!"
         );
         assert!(!registers.get_flag_carry(), "The carry flag is still set!");
-        registers.alu_rla_a_r8();
+        registers.alu_rla();
         assert_eq!(registers.a, 0x00, "Register A's values is not correct!");
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
-        registers.alu_rla_a_r8();
+        registers.alu_rla();
         assert_eq!(
             registers.a, 0b00000001,
             "Register A's values is not correct!"
         );
         assert!(!registers.get_flag_carry(), "The carry flag is still set!");
-        registers.alu_rra_a_r8();
+        registers.alu_rra();
         assert_eq!(registers.a, 0x00, "Register A's values is not correct!");
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
 
@@ -708,7 +738,7 @@ mod tests {
             a: 0b00000010,
             ..Registers::default()
         };
-        registers.alu_rrca_a_r8();
+        registers.alu_rrca();
         assert_eq!(
             registers.a, 0b00000001,
             "Register A's values is not correct!"
@@ -717,19 +747,19 @@ mod tests {
             !registers.get_flag_carry(),
             "The carry flag should not be set!"
         );
-        registers.alu_rrca_a_r8();
+        registers.alu_rrca();
         assert_eq!(
             registers.a, 0b10000000,
             "Register A's values is not correct!"
         );
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
-        registers.alu_rlca_a_r8();
+        registers.alu_rlca();
         assert_eq!(
             registers.a, 0b00000001,
             "Register A's values is not correct!"
         );
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
-        registers.alu_rlca_a_r8();
+        registers.alu_rlca();
         assert_eq!(
             registers.a, 0b00000010,
             "Register A's values is not correct!"

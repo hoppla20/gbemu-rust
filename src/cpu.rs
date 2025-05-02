@@ -113,14 +113,17 @@ impl Cpu {
     }
 
     pub fn trace_state(&self, mmu: &Mmu) {
-        trace!(
-            "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
-            self,
-            mmu.read_byte(self.registers.pc),
-            mmu.read_byte(self.registers.pc.overflowing_add(1).0),
-            mmu.read_byte(self.registers.pc.overflowing_add(2).0),
-            mmu.read_byte(self.registers.pc.overflowing_add(3).0)
-        )
+        match self.current_instruction {
+            Instruction::prefix => {},
+            _ => trace!(
+                "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+                self,
+                mmu.read_byte(self.registers.pc),
+                mmu.read_byte(self.registers.pc.wrapping_add(1)),
+                mmu.read_byte(self.registers.pc.wrapping_add(2)),
+                mmu.read_byte(self.registers.pc.wrapping_add(3))
+            ),
+        }
     }
 }
 

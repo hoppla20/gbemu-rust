@@ -62,7 +62,7 @@ impl Registers {
     pub fn set_register(&mut self, reg: Register, value: u8) {
         match reg {
             Register::A => self.a = value,
-            Register::F => self.f = value,
+            Register::F => self.f = value & 0xF0,
             Register::B => self.b = value,
             Register::C => self.c = value,
             Register::D => self.d = value,
@@ -79,7 +79,8 @@ impl Registers {
     }
     pub fn set_af(&mut self, value: u16) {
         self.a = (value >> 8) as u8;
-        self.f = (value & 0xFF) as u8;
+        // lower 4 bits of f flag can't be set
+        self.f = (value & 0xF0) as u8;
     }
 
     pub fn get_bc(&self) -> u16 {
@@ -187,12 +188,12 @@ impl Registers {
             MemoryOperand16::DE => self.get_de(),
             MemoryOperand16::HLI => {
                 let result = self.get_hl();
-                self.set_hl(self.get_hl().overflowing_add(1).0);
+                self.set_hl(self.get_hl().wrapping_add(1));
                 result
             },
             MemoryOperand16::HLD => {
                 let result = self.get_hl();
-                self.set_hl(self.get_hl().overflowing_sub(1).0);
+                self.set_hl(self.get_hl().wrapping_sub(1));
                 result
             },
         }
@@ -229,10 +230,10 @@ mod tests {
 
         regs.set_double_register(Register16::AF, 1);
         assert_eq!(regs.a, 0, "Single register value not correct!");
-        assert_eq!(regs.f, 1, "Single register value not correct!");
+        assert_eq!(regs.f, 0, "Single register value not correct!");
         assert_eq!(
             regs.get_double_register(Register16::AF),
-            1,
+            0,
             "Read value is different than written value!"
         );
 
