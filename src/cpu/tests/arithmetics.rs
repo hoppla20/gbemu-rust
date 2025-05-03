@@ -31,7 +31,7 @@ fn test_arithmetics_simple() {
     ];
 
     let mut emu = Emulator::new_from_buffer(&instructions, None);
-    emu.cpu = Cpu::new_zeroed(&mut emu.mmu);
+    emu.cpu = Cpu::new_zeroed();
 
     emu.cpu.registers.a = 0b10;
     emu.cpu.registers.b = 0b01;

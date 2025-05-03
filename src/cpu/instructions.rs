@@ -199,7 +199,6 @@ pub enum Instruction {
     xor_a_n8,
     or_a_n8,
     cp_a_n8,
-    add_sp_n8,
     cpl,
     daa,
 
@@ -223,6 +222,7 @@ pub enum Instruction {
     add_hl_r16 {
         operand: ArithmeticOperand16,
     },
+    add_sp_i8,
 
     // prefix
     prefix,
@@ -333,7 +333,7 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub(super) fn decode_prefix_instruction(opcode: u8) -> Self {
+    pub fn decode_prefix_instruction(opcode: u8) -> Self {
         match extract_bits!(opcode: u8, 6, 7) {
             0b00 => match extract_bits!(opcode: u8, 3, 5) {
                 0b000 => Self::rlc_r8 {
@@ -384,13 +384,14 @@ impl Instruction {
         }
     }
 
-    pub(super) fn decode_instruction(opcode: u8) -> Instruction {
+    pub fn decode_instruction(opcode: u8) -> Instruction {
         match opcode {
             0x00 => Self::nop,
             0x10 => Self::stop,
             0x76 => Self::halt,
             0xCB => Self::prefix,
 
+            0x08 => Self::ld_ind_n16_sp,
             0x18 => Self::jr_i8,
             0x20 | 0x28 | 0x30 | 0x38 => Self::jr_cond_i8 {
                 condition: extract_bits!(opcode: u8, 3, 4).into(),
@@ -484,7 +485,7 @@ impl Instruction {
             0xE0 => Self::ldh_ind_n8_a,
             0xF0 => Self::ldh_a_ind_n8,
 
-            0xE8 => Self::add_sp_n8,
+            0xE8 => Self::add_sp_i8,
             0xF8 => Self::ld_hl_sp_n8,
 
             0xC1 | 0xD1 | 0xE1 | 0xF1 => Self::pop_r16stk {
@@ -777,6 +778,43 @@ impl Cpu {
                 },
                 _ => panic_execuction!(),
             },
+            Instruction::add_sp_i8 => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    let sp_lsb = (self.registers.sp & 0x00FF) as u8;
+                    let (temp, overflow) = sp_lsb.overflowing_add(self.registers.z);
+                    self.registers.set_flag_zero(false);
+                    self.registers.set_flag_subtraction(false);
+                    self.registers
+                        .set_flag_half_carry(half_carry_add_r8(sp_lsb, self.registers.z));
+                    self.registers.set_flag_carry(overflow);
+                    self.registers.z = temp;
+                    Ok(false)
+                },
+                2 => {
+                    let adj = if (self.registers.z >> 7) == 0x01 {
+                        0xFF
+                    } else {
+                        0x00
+                    };
+                    self.registers.w = ((self.registers.pc >> 8) as u8)
+                        .wrapping_add(adj)
+                        .wrapping_add(if self.registers.get_flag_carry() {
+                            1
+                        } else {
+                            0
+                        });
+                    Ok(false)
+                },
+                3 => {
+                    self.registers.sp = self.registers.get_wz();
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
 
             // prefix
             Instruction::prefix => Ok(true),
@@ -985,6 +1023,36 @@ impl Cpu {
                         .set_arithmetic_target_r16(operand, self.registers.get_wz());
                     Ok(true)
                 },
+                _ => panic_execuction!(),
+            },
+            Instruction::ld_ind_n16_sp => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                2 => {
+                    mmu.write_byte(self.registers.get_wz(), (self.registers.sp & 0x00FF) as u8);
+                    self.registers
+                        .set_wz(self.registers.get_wz().wrapping_add(1));
+                    Ok(false)
+                },
+                3 => {
+                    mmu.write_byte(self.registers.get_wz(), (self.registers.sp >> 8) as u8);
+                    Ok(false)
+                },
+                4 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ld_sp_hl => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.sp = self.registers.get_hl();
+                    Ok(false)
+                },
+                1 => Ok(true),
                 _ => panic_execuction!(),
             },
             Instruction::ld_hl_sp_n8 => match self.current_instruction_cycle {

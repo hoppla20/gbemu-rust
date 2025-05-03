@@ -21,7 +21,7 @@ fn test_blargg_cpu_instrs(file_path: &str, doctor_test_num: Option<usize>) {
     emu.mmu.graphics.registers.lcd_y = 0x90;
 
     let mut cycle = 0;
-    let re_failed = Regex::new(r"^Failed .*$").unwrap();
+    let re_failed = Regex::new(r"^Failed.*$").unwrap();
     let re_passed = Regex::new(r"^Passed$").unwrap();
     let test_result;
     loop {
@@ -84,5 +84,13 @@ fn test_blargg_cpu_instrs_02() {
     test_blargg_cpu_instrs(
         "test_roms/blargg/cpu_instrs/individual/02-interrupts.gb",
         None,
+    );
+}
+
+#[test]
+fn test_blargg_cpu_instrs_03() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/03-op sp,hl.gb",
+        Some(3),
     );
 }
