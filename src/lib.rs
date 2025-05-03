@@ -5,6 +5,7 @@
 mod utils;
 
 mod cpu;
+mod emulator;
 mod graphics;
 mod memory;
 mod serial;

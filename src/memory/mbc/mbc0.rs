@@ -20,13 +20,16 @@ impl Mbc0 {
         }
     }
 
-    pub fn new_from_buffer(buffer: &[u8], with_ram: bool) -> Self {
+    pub fn new_from_buffer(buffer: &[u8]) -> Self {
         if buffer.len() > ROM_SIZE {
             panic!("Buffer size is not allowed to exceed {} bytes!", ROM_SIZE);
         }
 
         let mut rom = [0_u8; ROM_SIZE];
         rom[0..buffer.len()].copy_from_slice(buffer);
+
+        // TODO: check for ram
+        let with_ram = false;
 
         Mbc0 {
             rom,

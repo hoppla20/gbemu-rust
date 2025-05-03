@@ -5,7 +5,7 @@ use crate::memory::mmu::Mmu;
 use crate::utils::bit_operations::extract_bits;
 use crate::utils::half_carry::half_carry_add_r8;
 
-use super::{Cpu, ExecutionError};
+use super::{Cpu, ExecutionError, interrupts::Interrupt};
 
 macro_rules! panic_execuction {
     () => {
@@ -156,6 +156,9 @@ pub enum Instruction {
     halt,
     di,
     ei,
+    isr {
+        interrupt: Interrupt,
+    },
 
     // 8-bit arithmetics
     add_a_r8 {
@@ -609,13 +612,39 @@ impl Cpu {
         match self.current_instruction {
             //special
             Instruction::nop => Ok(true),
+            Instruction::halt => {
+                self.halted = true;
+                Ok(true)
+            },
             Instruction::di => {
+                self.interrupt_enable_pending = false;
                 self.interrupt_enabled = false;
                 Ok(true)
             },
             Instruction::ei => {
-                self.interrupt_enabled = true;
+                self.interrupt_enable_pending = true;
                 Ok(true)
+            },
+            Instruction::isr { interrupt } => match self.current_instruction_cycle {
+                0 => Ok(false),
+                1 => {
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                2 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc >> 8) as u8);
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                3 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc & 0x00FF) as u8);
+                    Ok(false)
+                },
+                4 => {
+                    self.registers.pc = Into::<u16>::into(interrupt);
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
             },
 
             // 8-bit arithmetics
@@ -958,6 +987,39 @@ impl Cpu {
                 },
                 _ => panic_execuction!(),
             },
+            Instruction::ld_hl_sp_n8 => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    let sp_lsb = (self.registers.sp & 0x00FF) as u8;
+                    let (result, overflow) = sp_lsb.overflowing_add(self.registers.z);
+                    self.registers.set_flag_zero(false);
+                    self.registers.set_flag_subtraction(false);
+                    self.registers
+                        .set_flag_half_carry(half_carry_add_r8(sp_lsb, self.registers.z));
+                    self.registers.set_flag_carry(overflow);
+                    self.registers.l = result;
+                    Ok(false)
+                },
+                2 => {
+                    let adj = if (self.registers.z >> 7) == 0x01 {
+                        0xFF
+                    } else {
+                        0x00
+                    };
+                    self.registers.h = ((self.registers.sp >> 8) as u8)
+                        .wrapping_add(adj)
+                        .wrapping_add(if self.registers.get_flag_carry() {
+                            1
+                        } else {
+                            0
+                        });
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
 
             // jumps
             Instruction::jr_i8 => match self.current_instruction_cycle {
@@ -1109,6 +1171,23 @@ impl Cpu {
                 },
                 2 => {
                     self.registers.pc = self.registers.get_wz();
+                    Ok(false)
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::reti => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.pc = self.registers.get_wz();
+                    self.interrupt_enabled = true;
                     Ok(false)
                 },
                 3 => Ok(true),

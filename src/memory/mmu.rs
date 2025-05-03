@@ -1,14 +1,14 @@
-use log::debug;
+use tracing::debug;
 
 use crate::serial::Serial;
 
 use super::mbc::Mbc;
 
-use super::super::graphics::GraphicsState;
 use super::{
     E_RAM_BANK_ADDR, ECHO_RAM_ADDR, H_RAM_ADDR, H_RAM_SIZE, IE_REGISTER_ADDR, IO_REGISTERS_ADDR,
     IoRegisters, OAM_ADDR, UNUSABLE_ADDR, V_RAM_ADDR, W_RAM_BANK_0_ADDR, W_RAM_BANK_SIZE,
 };
+use crate::graphics::GraphicsState;
 
 static CYCLES_PER_CLOCK_LOOKUP: [u16; 4] = [256, 4, 16, 64];
 
@@ -95,7 +95,7 @@ impl Mmu {
                 0xFF02 => return self.io.serial_transfer_control,
 
                 //timer
-                0xFF04 => return self.io.timer.divider,
+                0xFF04 => return self.io.timer.divider(),
                 0xFF05 => return self.io.timer.counter,
                 0xFF06 => return self.io.timer.modulo,
                 0xFF07 => return self.io.timer.control,
@@ -209,11 +209,11 @@ impl Mmu {
 
                 // timer
                 0xFF04 => {
-                    self.io.timer.divider = 0x00;
+                    self.io.timer.reset_divider();
                     return;
                 },
                 0xFF05 => {
-                    self.io.timer.counter = value;
+                    self.io.timer.write_counter(value);
                     return;
                 },
                 0xFF06 => {
