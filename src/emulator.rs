@@ -1,5 +1,8 @@
 use log::trace;
 
+#[cfg(test)]
+use std::cell::RefCell;
+
 use crate::{
     cpu::{Cpu, instructions::Instruction, interrupts::Interrupt},
     memory::{mbc::Mbc0, mmu::Mmu},
@@ -16,6 +19,9 @@ pub enum ExecutionError {
 pub struct Emulator {
     pub cpu: Cpu,
     pub mmu: Mmu,
+
+    #[cfg(test)]
+    pub trace_counter: RefCell<usize>,
 }
 
 impl Emulator {
@@ -31,6 +37,9 @@ impl Emulator {
         let mut result = Self {
             cpu: Cpu::new(&mut mmu),
             mmu,
+
+            #[cfg(test)]
+            trace_counter: RefCell::new(0),
         };
 
         result.trace_state();
@@ -57,14 +66,8 @@ impl Emulator {
             self.cpu.halted = false;
         }
 
-        if cpu_completed {
-            match self.cpu.current_instruction {
-                Instruction::isr { .. } => {},
-                _ => self.trace_state(),
-            }
-        }
-
         if !self.cpu.halted && cpu_completed {
+            self.trace_state();
             self.cpu.generic_fetch(&mut self.mmu)?;
         }
 
@@ -74,18 +77,26 @@ impl Emulator {
     pub fn trace_state(&self) {
         match self.cpu.current_instruction {
             Instruction::prefix => {},
-            _ => trace!(
-                "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X} SC:{:04X} IE:{:02X} IF:{:02X} {:?}",
-                self.cpu,
-                self.mmu.read_byte(self.cpu.registers.pc),
-                self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(1)),
-                self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(2)),
-                self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(3)),
-                self.mmu.io.timer.system_counter,
-                self.mmu.io.interrupt_enable,
-                self.mmu.io.interrupt_flags,
-                self.mmu.io.timer,
-            ),
+            Instruction::isr { .. } => {},
+            _ => {
+                #[cfg(test)]
+                {
+                    *self.trace_counter.borrow_mut() += 1;
+                }
+
+                trace!(
+                    "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X} SC:{:04X} IE:{:02X} IF:{:02X} {:?}",
+                    self.cpu,
+                    self.mmu.read_byte(self.cpu.registers.pc),
+                    self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(1)),
+                    self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(2)),
+                    self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(3)),
+                    self.mmu.io.timer.system_counter,
+                    self.mmu.io.interrupt_enable,
+                    self.mmu.io.interrupt_flags,
+                    self.mmu.io.timer,
+                );
+            },
         }
     }
 }

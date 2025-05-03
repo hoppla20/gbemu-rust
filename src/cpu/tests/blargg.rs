@@ -1,16 +1,57 @@
 use std::{
     fs::File,
     io::{BufReader, Read},
+    path::{Path, PathBuf},
     process::Command,
 };
 
 use regex::Regex;
-use tracing::{info, warn};
+use tracing::{Level, info, warn};
+use tracing_subscriber::{
+    EnvFilter, Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt,
+};
 
-use crate::{emulator::Emulator, tests::setup_logger};
+const TRACES_DIR: &str = "traces";
 
-fn test_blargg_cpu_instrs(file_path: &str, doctor_test_num: Option<usize>) {
-    setup_logger();
+use crate::emulator::Emulator;
+
+pub fn setup_logger(path: &PathBuf) {
+    let layer_stdout = fmt::Layer::default()
+        .with_writer(std::io::stdout)
+        .with_filter(EnvFilter::from_default_env());
+
+    let trace_log = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path)
+        .unwrap();
+    let layer_trace = fmt::Layer::default()
+        .with_writer(trace_log)
+        .without_time()
+        .with_level(false)
+        .with_target(false)
+        .with_filter(filter::filter_fn(|metadata| {
+            matches!(*metadata.level(), Level::TRACE)
+        }));
+
+    let _ = tracing_subscriber::registry()
+        .with(layer_stdout)
+        .with(layer_trace)
+        .try_init();
+
+    info!("Initialized tracing logger");
+}
+
+fn test_blargg_cpu_instrs(file_path: &str, test_num: usize, max_traces_option: Option<usize>) {
+    let traces_file_path = Path::new(TRACES_DIR).join(format!("cpu_instrs_{:02}.log", test_num));
+    setup_logger(&traces_file_path);
+
+    if let Some(parent_dir) = traces_file_path.parent() {
+        if !parent_dir.try_exists().unwrap() {
+            std::fs::create_dir(parent_dir).unwrap();
+        }
+    }
 
     let f = File::open(file_path).unwrap();
     let mut reader = BufReader::new(f);
@@ -20,12 +61,11 @@ fn test_blargg_cpu_instrs(file_path: &str, doctor_test_num: Option<usize>) {
     let mut emu = Emulator::new_from_buffer(&rom, None);
     emu.mmu.graphics.registers.lcd_y = 0x90;
 
+    let re_failed = Regex::new(r"^Failed").unwrap();
+    let re_passed = Regex::new(r"^Passed").unwrap();
+    let mut test_result = false;
     let mut cycle = 0;
-    let re_failed = Regex::new(r"^Failed.*$").unwrap();
-    let re_passed = Regex::new(r"^Passed$").unwrap();
-    let test_result;
     loop {
-        cycle += 1;
         if let Err(err) = emu.step() {
             warn!("Encountered error on cycle {}: {:02X?}", cycle, err);
             test_result = false;
@@ -39,51 +79,61 @@ fn test_blargg_cpu_instrs(file_path: &str, doctor_test_num: Option<usize>) {
         }
 
         if re_passed.is_match(emu.mmu.serial.get_last_buffer()) {
-            info!("Tests passed!");
+            info!("Tests passed after {} traces!", *emu.trace_counter.borrow());
             test_result = true;
-            break;
+        }
+
+        cycle += 0;
+        if let Some(max_traces) = max_traces_option {
+            if *emu.trace_counter.borrow() >= max_traces {
+                info!("Ran {} number of traces", *emu.trace_counter.borrow());
+                break;
+            }
         }
     }
 
-    if let Some(test_num) = doctor_test_num {
-        info!("Running gameboy-doctor");
-        if cfg!(target_os = "windows") {
-            unimplemented!("Executing this test on windows is currently not supported");
-        } else {
-            let gd_command = Command::new("/usr/bin/env")
-                .arg("python3")
-                .arg("external/gameboy-doctor/gameboy-doctor")
-                .arg("trace.log")
-                .arg("cpu_instrs")
-                .arg(format!("{}", test_num))
-                .output()
-                .expect("Could not execute gameboy-doctor");
+    info!("Running gameboy-doctor");
+    if cfg!(target_os = "windows") {
+        unimplemented!("Executing this test on windows is currently not supported");
+    } else {
+        let gd_command = Command::new("/usr/bin/env")
+            .arg("python3")
+            .arg("external/gameboy-doctor/gameboy-doctor")
+            .arg(&traces_file_path)
+            .arg("cpu_instrs")
+            .arg(format!("{}", test_num))
+            .output()
+            .expect("Could not execute gameboy-doctor");
 
-            if test_result && gd_command.status.success() {
-                info!(
-                    "Gameboy-doctor:\n{}",
-                    String::from_utf8(gd_command.stdout).unwrap()
-                );
-            } else {
-                panic!(
-                    "Gameboy-doctor:\n{}",
-                    String::from_utf8(gd_command.stdout).unwrap()
-                );
-            }
-        };
-    }
+        if test_result && gd_command.status.success() {
+            info!(
+                "Gameboy-doctor:\n{}",
+                String::from_utf8(gd_command.stdout).unwrap()
+            );
+        } else {
+            panic!(
+                "Gameboy-doctor:\n{}",
+                String::from_utf8(gd_command.stdout).unwrap()
+            );
+        }
+    };
 }
 
 #[test]
 fn test_blargg_cpu_instrs_01() {
-    test_blargg_cpu_instrs("test_roms/blargg/cpu_instrs/individual/01-special.gb", None);
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/01-special.gb",
+        1,
+        Some(1257587),
+    );
 }
 
 #[test]
 fn test_blargg_cpu_instrs_02() {
     test_blargg_cpu_instrs(
         "test_roms/blargg/cpu_instrs/individual/02-interrupts.gb",
-        None,
+        2,
+        Some(161057),
     );
 }
 
@@ -91,6 +141,7 @@ fn test_blargg_cpu_instrs_02() {
 fn test_blargg_cpu_instrs_03() {
     test_blargg_cpu_instrs(
         "test_roms/blargg/cpu_instrs/individual/03-op sp,hl.gb",
-        Some(3),
+        3,
+        None,
     );
 }
