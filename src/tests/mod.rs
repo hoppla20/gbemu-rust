@@ -24,10 +24,10 @@ pub fn setup_logger() {
             matches!(*metadata.level(), Level::TRACE)
         }));
 
-    tracing_subscriber::registry()
+    let _ = tracing_subscriber::registry()
         .with(layer_stdout)
         .with(layer_trace)
-        .init();
+        .try_init();
 
     info!("Initialized tracing logger");
 }

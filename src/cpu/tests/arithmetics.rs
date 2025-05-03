@@ -1,8 +1,4 @@
-use crate::{
-    cpu::Cpu,
-    prelude::{Mbc0, Mmu},
-    serial::LogSerial,
-};
+use crate::{cpu::Cpu, emulator::Emulator};
 
 #[test]
 fn test_arithmetics_simple() {
@@ -34,100 +30,98 @@ fn test_arithmetics_simple() {
         0xA6, // RES 4, (HL)
     ];
 
-    let mbc = Mbc0::new_from_buffer(&instructions);
-    let serial = LogSerial::default();
-    let mut mmu = Mmu::new(Box::new(mbc), Box::new(serial));
-    let mut cpu = Cpu::new_zeroed(&mut mmu);
+    let mut emu = Emulator::new_from_buffer(&instructions, None);
+    emu.cpu = Cpu::new_zeroed(&mut emu.mmu);
 
-    cpu.registers.a = 0b10;
-    cpu.registers.b = 0b01;
+    emu.cpu.registers.a = 0b10;
+    emu.cpu.registers.b = 0b01;
 
-    assert!(cpu.step(&mut mmu).unwrap()); // ADD A, B
-    assert_eq!(cpu.registers.a, 0b11);
+    emu.step().unwrap(); // ADD A, B
+    assert_eq!(emu.cpu.registers.a, 0b11);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // SUB A, B
-    assert_eq!(cpu.registers.a, 0b10);
+    emu.step().unwrap(); // SUB A, B
+    assert_eq!(emu.cpu.registers.a, 0b10);
 
-    cpu.registers.set_flag_carry(true);
-    assert!(cpu.step(&mut mmu).unwrap()); // ADC A, B
-    assert_eq!(cpu.registers.a, 0b100);
+    emu.cpu.registers.set_flag_carry(true);
+    emu.step().unwrap(); // ADC A, B
+    assert_eq!(emu.cpu.registers.a, 0b100);
 
-    cpu.registers.set_flag_carry(true);
-    assert!(cpu.step(&mut mmu).unwrap()); // SBC A, B
-    assert_eq!(cpu.registers.a, 0b10);
+    emu.cpu.registers.set_flag_carry(true);
+    emu.step().unwrap(); // SBC A, B
+    assert_eq!(emu.cpu.registers.a, 0b10);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // OR A, B
-    assert_eq!(cpu.registers.a, 0b11);
+    emu.step().unwrap(); // OR A, B
+    assert_eq!(emu.cpu.registers.a, 0b11);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // SUB A, B
-    assert_eq!(cpu.registers.a, 0b10);
+    emu.step().unwrap(); // SUB A, B
+    assert_eq!(emu.cpu.registers.a, 0b10);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // AND A, B
-    assert_eq!(cpu.registers.a, 0x00);
-    assert!(cpu.registers.get_flag_zero());
+    emu.step().unwrap(); // AND A, B
+    assert_eq!(emu.cpu.registers.a, 0x00);
+    emu.cpu.registers.get_flag_zero();
 
-    assert!(cpu.step(&mut mmu).unwrap()); // INC A
-    assert_eq!(cpu.registers.a, 0x01);
+    emu.step().unwrap(); // INC A
+    assert_eq!(emu.cpu.registers.a, 0x01);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // DEC A
-    assert_eq!(cpu.registers.a, 0x00);
+    emu.step().unwrap(); // DEC A
+    assert_eq!(emu.cpu.registers.a, 0x00);
 
-    assert!(!cpu.step(&mut mmu).unwrap()); // INC HL
-    assert!(cpu.step(&mut mmu).unwrap()); // INC HL
-    assert_eq!(cpu.registers.get_hl(), 0x0001);
+    emu.step().unwrap(); // INC HL
+    emu.step().unwrap(); // INC HL
+    assert_eq!(emu.cpu.registers.get_hl(), 0x0001);
 
-    assert!(!cpu.step(&mut mmu).unwrap()); // DEC HL
-    assert!(cpu.step(&mut mmu).unwrap()); // DEC HL
-    assert_eq!(cpu.registers.get_hl(), 0x0000);
+    emu.step().unwrap(); // DEC HL
+    emu.step().unwrap(); // DEC HL
+    assert_eq!(emu.cpu.registers.get_hl(), 0x0000);
 
-    assert!(!cpu.step(&mut mmu).unwrap()); // ADD A, (HL)
-    assert_eq!(cpu.registers.z, 0x80);
-    assert_eq!(cpu.registers.a, 0x00);
-    assert!(cpu.step(&mut mmu).unwrap()); // ADD A, (HL)
-    assert_eq!(cpu.registers.a, 0x80);
+    emu.step().unwrap(); // ADD A, (HL
+    assert_eq!(emu.cpu.registers.z, 0x80);
+    assert_eq!(emu.cpu.registers.a, 0x00);
+    emu.step().unwrap(); // ADD A, (HL
+    assert_eq!(emu.cpu.registers.a, 0x80);
 
-    assert!(!cpu.step(&mut mmu).unwrap()); // ADD HL, BC
-    assert!(cpu.step(&mut mmu).unwrap()); // ADD HL, BC
-    assert_eq!(cpu.registers.get_hl(), 0x0100);
+    emu.step().unwrap(); // ADD HL, BC
+    emu.step().unwrap(); // ADD HL, BC
+    assert_eq!(emu.cpu.registers.get_hl(), 0x0100);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // PREFIX
-    assert!(cpu.step(&mut mmu).unwrap()); // RES 0, H
-    assert_eq!(cpu.registers.get_hl(), 0x0000);
+    emu.step().unwrap(); // PREFIX
+    emu.step().unwrap(); // RES 0, H
+    assert_eq!(emu.cpu.registers.get_hl(), 0x0000);
 
-    cpu.registers.set_hl(0xFF80);
-    assert_eq!(mmu.read_byte(cpu.registers.get_hl()), 0x00);
+    emu.cpu.registers.set_hl(0xFF80);
+    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x00);
 
-    assert!(!cpu.step(&mut mmu).unwrap()); // INC (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // INC (HL)
-    assert!(cpu.step(&mut mmu).unwrap()); // INC (HL)
-    assert_eq!(mmu.read_byte(cpu.registers.get_hl()), 0x01);
+    emu.step().unwrap(); // INC (HL
+    emu.step().unwrap(); // INC (HL
+    emu.step().unwrap(); // INC (HL
+    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x01);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // PREFIX (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // SWAP (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // SWAP (HL)
-    assert!(cpu.step(&mut mmu).unwrap()); // SWAP (HL)
-    assert_eq!(mmu.read_byte(cpu.registers.get_hl()), 0x10);
+    emu.step().unwrap(); // PREFIX (HL
+    emu.step().unwrap(); // SWAP (HL
+    emu.step().unwrap(); // SWAP (HL
+    emu.step().unwrap(); // SWAP (HL
+    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x10);
 
-    assert!(!cpu.step(&mut mmu).unwrap()); // DEC (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // DEC (HL)
-    assert!(cpu.step(&mut mmu).unwrap()); // DEC (HL)
-    assert_eq!(mmu.read_byte(cpu.registers.get_hl()), 0x0F);
+    emu.step().unwrap(); // DEC (HL
+    emu.step().unwrap(); // DEC (HL
+    emu.step().unwrap(); // DEC (HL
+    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // PREFIX (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // BIT 4, (HL)
-    assert!(cpu.step(&mut mmu).unwrap()); // BIT 4, (HL)
-    assert_eq!(mmu.read_byte(cpu.registers.get_hl()), 0x0F);
-    assert!(cpu.registers.get_flag_zero());
+    emu.step().unwrap(); // PREFIX (HL
+    emu.step().unwrap(); // BIT 4, (HL
+    emu.step().unwrap(); // BIT 4, (HL
+    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
+    emu.cpu.registers.get_flag_zero();
 
-    assert!(cpu.step(&mut mmu).unwrap()); // PREFIX (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // SET 4, (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // SET 4, (HL)
-    assert!(cpu.step(&mut mmu).unwrap()); // SET 4, (HL)
-    assert_eq!(mmu.read_byte(cpu.registers.get_hl()), 0x1F);
+    emu.step().unwrap(); // PREFIX (HL
+    emu.step().unwrap(); // SET 4, (HL
+    emu.step().unwrap(); // SET 4, (HL
+    emu.step().unwrap(); // SET 4, (HL
+    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x1F);
 
-    assert!(cpu.step(&mut mmu).unwrap()); // PREFIX (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // RES 4, (HL)
-    assert!(!cpu.step(&mut mmu).unwrap()); // RES 4, (HL)
-    assert!(cpu.step(&mut mmu).unwrap()); // RES 4, (HL)
-    assert_eq!(mmu.read_byte(cpu.registers.get_hl()), 0x0F);
+    emu.step().unwrap(); // PREFIX (HL
+    emu.step().unwrap(); // RES 4, (HL
+    emu.step().unwrap(); // RES 4, (HL
+    emu.step().unwrap(); // RES 4, (HL
+    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
 }
