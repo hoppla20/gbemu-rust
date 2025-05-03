@@ -1,7 +1,9 @@
-use log::trace;
+use std::fmt::Debug;
 
 #[cfg(test)]
 use std::cell::RefCell;
+
+use tracing::trace;
 
 use crate::{
     cpu::{Cpu, instructions::Instruction, interrupts::Interrupt},
@@ -21,11 +23,15 @@ pub struct Emulator {
     pub mmu: Mmu,
 
     #[cfg(test)]
-    pub trace_counter: RefCell<usize>,
+    trace_counter: RefCell<usize>,
 }
 
 impl Emulator {
-    pub fn new_from_buffer(rom: &[u8], serial_option: Option<Box<dyn Serial>>) -> Self {
+    pub fn new_from_buffer(
+        rom: &[u8],
+        cpu_option: Option<Cpu>,
+        serial_option: Option<Box<dyn Serial>>,
+    ) -> Self {
         let mbc = Mbc0::new_from_buffer(rom);
         let serial = if let Some(s) = serial_option {
             s
@@ -35,14 +41,18 @@ impl Emulator {
         let mut mmu = Mmu::new(Box::new(mbc), serial);
 
         let mut result = Self {
-            cpu: Cpu::new(&mut mmu),
+            cpu: if let Some(cpu) = cpu_option {
+                cpu
+            } else {
+                Cpu::new(&mut mmu)
+            },
             mmu,
 
             #[cfg(test)]
             trace_counter: RefCell::new(0),
         };
 
-        result.trace_state();
+        trace!("{:?}", result);
 
         result.cpu.current_instruction =
             Instruction::decode_instruction(result.mmu.read_byte(result.cpu.registers.pc));
@@ -67,36 +77,44 @@ impl Emulator {
         }
 
         if !self.cpu.halted && cpu_completed {
-            self.trace_state();
+            match self.cpu.current_instruction {
+                Instruction::prefix => {},
+                Instruction::isr { .. } => {},
+                _ => {
+                    #[cfg(test)]
+                    {
+                        *self.trace_counter.borrow_mut() += 1;
+                    }
+
+                    trace!("{:?}", self);
+                },
+            }
+
             self.cpu.generic_fetch(&mut self.mmu)?;
         }
 
         Ok(())
     }
 
-    pub fn trace_state(&self) {
-        match self.cpu.current_instruction {
-            Instruction::prefix => {},
-            Instruction::isr { .. } => {},
-            _ => {
-                #[cfg(test)]
-                {
-                    *self.trace_counter.borrow_mut() += 1;
-                }
+    #[cfg(test)]
+    pub fn trace_counter(&self) -> usize {
+        *self.trace_counter.borrow()
+    }
+}
 
-                trace!(
-                    "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X} SC:{:04X} IE:{:02X} IF:{:02X} {:?}",
-                    self.cpu,
-                    self.mmu.read_byte(self.cpu.registers.pc),
-                    self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(1)),
-                    self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(2)),
-                    self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(3)),
-                    self.mmu.io.timer.system_counter,
-                    self.mmu.io.interrupt_enable,
-                    self.mmu.io.interrupt_flags,
-                    self.mmu.io.timer,
-                );
-            },
-        }
+impl Debug for Emulator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X} SC:{:04X} IE:{:02X} IF:{:02X} {:?}",
+            self.cpu,
+            self.mmu.read_byte(self.cpu.registers.pc),
+            self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(1)),
+            self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(2)),
+            self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(3)),
+            self.mmu.io.timer.system_counter,
+            self.mmu.io.interrupt_enable,
+            self.mmu.io.interrupt_flags,
+            self.mmu.io.timer,
+        ))
     }
 }
