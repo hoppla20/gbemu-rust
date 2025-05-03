@@ -1,4 +1,4 @@
-use log::debug;
+use tracing::debug;
 
 use crate::serial::Serial;
 
@@ -95,7 +95,7 @@ impl Mmu {
                 0xFF02 => return self.io.serial_transfer_control,
 
                 //timer
-                0xFF04 => return self.io.timer.divider,
+                0xFF04 => return self.io.timer.divider(),
                 0xFF05 => return self.io.timer.counter,
                 0xFF06 => return self.io.timer.modulo,
                 0xFF07 => return self.io.timer.control,
@@ -209,11 +209,11 @@ impl Mmu {
 
                 // timer
                 0xFF04 => {
-                    self.io.timer.divider = 0x00;
+                    self.io.timer.reset_divider();
                     return;
                 },
                 0xFF05 => {
-                    self.io.timer.counter = value;
+                    self.io.timer.write_counter(value);
                     return;
                 },
                 0xFF06 => {

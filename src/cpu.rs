@@ -1,26 +1,19 @@
 mod alu;
-mod instructions;
-mod interrupts;
-
+pub mod instructions;
+pub mod interrupts;
 pub mod registers;
 
-use std::fmt::Debug;
-
-use instructions::Instruction;
-use log::{debug, trace};
-use registers::Registers;
-
+use self::instructions::Instruction;
+use self::registers::Registers;
+use crate::emulator::ExecutionError;
 use crate::memory::mmu::Mmu;
 
-#[derive(Debug)]
-pub enum ExecutionError {
-    NoImpl { instruction: Instruction },
-    MemoryWrite { address: u16 },
-    MemoryRead { address: u16 },
-}
+use std::fmt::Debug;
+use tracing::{debug, trace};
 
 pub struct Cpu {
     pub registers: Registers,
+    pub halted: bool,
 
     current_instruction: Instruction,
     current_instruction_cycle: u8,
@@ -30,7 +23,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new_from_registers(mmu: &Mmu, registers: Registers) -> Self {
+    pub fn new_from_registers(mmu: &mut Mmu, registers: Registers) -> Self {
         let mut result = Cpu {
             registers,
 
@@ -39,6 +32,8 @@ impl Cpu {
 
             interrupt_enabled: false,
             interrupt_enable_pending: false,
+
+            halted: false,
         };
 
         result.trace_state(mmu);
@@ -50,11 +45,11 @@ impl Cpu {
         result
     }
 
-    pub fn new_zeroed(mmu: &Mmu) -> Self {
+    pub fn new_zeroed(mmu: &mut Mmu) -> Self {
         Cpu::new_from_registers(mmu, Registers::default())
     }
 
-    pub fn new(mmu: &Mmu) -> Self {
+    pub fn new(mmu: &mut Mmu) -> Self {
         Cpu::new_from_registers(
             mmu,
             Registers {
@@ -87,53 +82,71 @@ impl Cpu {
     }
 
     pub fn step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
-        let completed = self.instruction_step(mmu)?;
-
-        if self.interrupt_enable_pending {
-            self.interrupt_enabled = self.interrupt_enable_pending;
+        if self.interrupt_enable_pending && !self.interrupt_enabled {
+            self.interrupt_enabled = true;
             self.interrupt_enable_pending = false;
         }
 
-        if completed {
-            self.trace_state(mmu);
-
-            if let Some(interrupt) = self.interrupt_check(mmu) {
-                self.current_instruction = Instruction::isr { interrupt };
+        if !self.halted {
+            if self.instruction_step(mmu)? {
+                self.current_instruction_cycle = 0;
+                Ok(true)
             } else {
-                let opcode = self.read_byte_pc(mmu);
-
-                debug!("Decoding opcode 0x{:02X}", opcode);
-
-                match self.current_instruction {
-                    Instruction::prefix => {
-                        self.current_instruction = Instruction::decode_prefix_instruction(opcode);
-                    },
-                    _ => self.current_instruction = Instruction::decode_instruction(opcode),
-                }
+                self.current_instruction_cycle += 1;
+                Ok(false)
             }
-
-            debug!("Decoded instruction {:02X?}", self.current_instruction);
-
-            self.current_instruction_cycle = 0;
         } else {
-            self.current_instruction_cycle += 1;
+            Ok(false)
+        }
+    }
 
-            return Ok(false);
+    pub fn generic_fetch(&mut self, mmu: &mut Mmu) -> Result<(), ExecutionError> {
+        match self.current_instruction {
+            Instruction::isr { .. } => {},
+            _ => self.trace_state(mmu),
         }
 
-        Ok(completed)
+        if let Some(interrupt) = self.interrupt_check(mmu) {
+            debug!(
+                "Executing interrupt service routing for interrupt {:?}",
+                interrupt
+            );
+
+            self.current_instruction = Instruction::isr { interrupt };
+        } else {
+            let opcode = self.read_byte_pc(mmu);
+
+            debug!("Decoding opcode 0x{:02X}", opcode);
+
+            match self.current_instruction {
+                Instruction::prefix => {
+                    self.current_instruction = Instruction::decode_prefix_instruction(opcode);
+                },
+                _ => self.current_instruction = Instruction::decode_instruction(opcode),
+            }
+        }
+
+        debug!("Decoded instruction {:02X?}", self.current_instruction);
+
+        self.current_instruction_cycle = 0;
+
+        Ok(())
     }
 
     pub fn trace_state(&self, mmu: &Mmu) {
         match self.current_instruction {
             Instruction::prefix => {},
             _ => trace!(
-                "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+                "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X} SC:{:04X} IE:{:02X} IF:{:02X} {:?}",
                 self,
                 mmu.read_byte(self.registers.pc),
                 mmu.read_byte(self.registers.pc.wrapping_add(1)),
                 mmu.read_byte(self.registers.pc.wrapping_add(2)),
-                mmu.read_byte(self.registers.pc.wrapping_add(3))
+                mmu.read_byte(self.registers.pc.wrapping_add(3)),
+                mmu.io.timer.system_counter,
+                mmu.io.interrupt_enable,
+                mmu.io.interrupt_flags,
+                mmu.io.timer,
             ),
         }
     }

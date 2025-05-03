@@ -612,7 +612,12 @@ impl Cpu {
         match self.current_instruction {
             //special
             Instruction::nop => Ok(true),
+            Instruction::halt => {
+                self.halted = true;
+                Ok(true)
+            },
             Instruction::di => {
+                self.interrupt_enable_pending = false;
                 self.interrupt_enabled = false;
                 Ok(true)
             },
@@ -633,7 +638,10 @@ impl Cpu {
                 },
                 3 => {
                     mmu.write_byte(self.registers.sp, (self.registers.pc & 0x00FF) as u8);
-                    self.registers.pc = interrupt.into();
+                    Ok(false)
+                },
+                4 => {
+                    self.registers.pc = Into::<u16>::into(interrupt);
                     Ok(true)
                 },
                 _ => panic_execuction!(),
@@ -1001,7 +1009,7 @@ impl Cpu {
                     } else {
                         0x00
                     };
-                    self.registers.h = ((self.registers.sp > 8) as u8)
+                    self.registers.h = ((self.registers.sp >> 8) as u8)
                         .wrapping_add(adj)
                         .wrapping_add(if self.registers.get_flag_carry() {
                             1
@@ -1163,6 +1171,23 @@ impl Cpu {
                 },
                 2 => {
                     self.registers.pc = self.registers.get_wz();
+                    Ok(false)
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::reti => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.w = self.read_byte_pc(mmu);
+                    Ok(false)
+                },
+                2 => {
+                    self.registers.pc = self.registers.get_wz();
+                    self.interrupt_enabled = true;
                     Ok(false)
                 },
                 3 => Ok(true),

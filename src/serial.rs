@@ -1,4 +1,4 @@
-use log::debug;
+use tracing::debug;
 
 pub trait Serial {
     fn write(&mut self, c: char);

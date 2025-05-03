@@ -34,10 +34,10 @@ fn test_arithmetics_simple() {
         0xA6, // RES 4, (HL)
     ];
 
-    let mbc = Mbc0::new_from_buffer(&instructions, false);
+    let mbc = Mbc0::new_from_buffer(&instructions);
     let serial = LogSerial::default();
     let mut mmu = Mmu::new(Box::new(mbc), Box::new(serial));
-    let mut cpu = Cpu::new_zeroed(&mmu);
+    let mut cpu = Cpu::new_zeroed(&mut mmu);
 
     cpu.registers.a = 0b10;
     cpu.registers.b = 0b01;
