@@ -1,6 +1,0 @@
-[book]
-authors = ["hoppla20"]
-language = "en"
-multilingual = false
-src = "src"
-title = "Gameboy Emulator written in Rust"
