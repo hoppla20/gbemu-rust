@@ -30,8 +30,8 @@ fn test_arithmetics_simple() {
         0xA6, // RES 4, (HL)
     ];
 
-    let mut emu = Emulator::new_from_buffer(&instructions, None);
-    emu.cpu = Cpu::new_zeroed(&mut emu.mmu);
+    let cpu_zeroed = Cpu::new_zeroed();
+    let mut emu = Emulator::new_from_buffer(&instructions, Some(cpu_zeroed), None);
 
     emu.cpu.registers.a = 0b10;
     emu.cpu.registers.b = 0b01;

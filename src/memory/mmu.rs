@@ -106,6 +106,7 @@ impl Mmu {
                 // TODO: audio
                 0xFF10..=0xFF26 => {
                     debug!(
+                        name: "mmu::address::noimpl",
                         "Reading from not implemented audio register at address 0x{:02X}. Returning 0x00",
                         address
                     );
@@ -234,6 +235,7 @@ impl Mmu {
                 // TODO: audio
                 0xFF10..=0xFF26 => {
                     debug!(
+                        name: "mmu::address::noimpl",
                         "Writing to not implemented audio register 0x{:02X}",
                         address
                     );

@@ -21,7 +21,7 @@ impl Serial for LogSerial {
 
     fn transfer(&mut self, serial_transfer_control: &mut u8) {
         if self.current == '\n' {
-            debug!("Serial output: '{}'", self.buffer);
+            debug!(name: "serial::transfer", "Serial output: '{}'", self.buffer);
             self.last_buffer = self.buffer.clone();
             self.buffer.clear();
         } else {

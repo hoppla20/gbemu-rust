@@ -1,7 +1,7 @@
 use core::panic;
 use std::fmt::Debug;
 
-use log::debug;
+use tracing::debug;
 
 use crate::emulator::ExecutionError;
 
@@ -83,6 +83,7 @@ impl TimerRegisters {
         let mut request_interrupt = false;
         if self.pending_overflow {
             debug!(
+                name: "timer::interrupt",
                 "Requesting timer interrupt and resetting timer counter to timer modulo {}",
                 self.modulo
             );
@@ -122,11 +123,12 @@ impl TimerRegisters {
 
                 if overflow {
                     debug!(
+                        name: "timer::overflow",
                         "Timer counter overflowed. Delayed interrupt request and counter reset after the next cycle"
                     );
                     self.pending_overflow = true;
                 } else {
-                    debug!("Incremented timer counter to {}", self.counter);
+                    debug!(name: "timer::increment", "Incremented timer counter to {}", self.counter);
                 }
             }
         }

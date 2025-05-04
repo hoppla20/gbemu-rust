@@ -1,4 +1,7 @@
+use std::process::exit;
+
 use super::instructions::{Condition, MemoryOperand16, StackOperand16};
+use tracing::error;
 
 const FLAG_ZERO_BYTE_POS: u8 = 7;
 const FLAG_SUBTRACTION_BYTE_POS: u8 = 6;
@@ -69,8 +72,14 @@ impl Registers {
             Register::E => self.e = value,
             Register::H => self.h = value,
             Register::L => self.l = value,
-            Register::W => panic!("Writing into register W is not allowed with this method!"),
-            Register::Z => panic!("Writing into register Z is not allowed with this method!"),
+            Register::W => {
+                error!("Writing into register W is not allowed with this method!");
+                exit(500);
+            },
+            Register::Z => {
+                error!("Writing into register Z is not allowed with this method!");
+                exit(500);
+            },
         }
     }
 

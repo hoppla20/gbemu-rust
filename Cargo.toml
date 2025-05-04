@@ -16,7 +16,6 @@ opt-level = 3
 opt-level = 3
 
 [dependencies]
-log = "0.4.27"
 regex = "1.11.1"
 tracing = "0.1.41"
 tracing-appender = "0.2.3"
