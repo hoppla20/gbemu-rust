@@ -843,7 +843,12 @@ impl Cpu {
             },
 
             // prefix
-            Instruction::prefix => Ok(true),
+            Instruction::prefix => {
+                let opcode = self.read_byte_pc(mmu);
+                self.current_instruction = Instruction::decode_prefix_instruction(opcode);
+                self.current_instruction_cycle = 0xFF;
+                Ok(false)
+            },
             Instruction::rlc_r8 { operand } => instr_r8_match!(self, operand, alu_rlc_r8, mmu),
             Instruction::rrc_r8 { operand } => instr_r8_match!(self, operand, alu_rrc_r8, mmu),
             Instruction::rl_r8 { operand } => instr_r8_match!(self, operand, alu_rl_r8, mmu),

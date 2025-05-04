@@ -7,7 +7,10 @@ use std::{
 };
 use tracing::{info, warn};
 
-use crate::{emulator::Emulator, tests::setup_logger};
+use crate::{
+    emulator::Emulator,
+    tests::{setup_default_logger, setup_gameboy_doctor_logger},
+};
 
 const TRACES_DIR: &str = "traces";
 
@@ -15,16 +18,13 @@ fn trace_file_path(test_num: usize) -> PathBuf {
     Path::new(TRACES_DIR).join(format!("cpu_instrs_{:02}.log", test_num))
 }
 
-fn test_blargg_cpu_instrs(rom_file_path: &str, test_num: usize, min_traces_option: Option<usize>) {
-    let traces = trace_file_path(test_num);
-    let _guard = setup_logger(&traces);
-
+fn test_blargg_cpu_instrs(rom_file_path: &str, min_traces_option: Option<usize>) -> bool {
     let f = File::open(rom_file_path).unwrap();
     let mut reader = BufReader::new(f);
     let mut rom = Vec::new();
     reader.read_to_end(&mut rom).unwrap();
 
-    let mut emu = Emulator::new_from_buffer(&rom, None, None);
+    let mut emu = Emulator::new_from_buffer(rom, None, None);
     emu.mmu.graphics.registers.lcd_y = 0x90;
 
     let re_failed = Regex::new(r"^Failed").unwrap();
@@ -50,15 +50,27 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, test_num: usize, min_traces_optio
         }
 
         cycle += 0;
-        if test_passed {
-            if let Some(min_traces) = min_traces_option {
-                if emu.instruction_counter() >= min_traces {
-                    info!("Ran {} number of traces", emu.instruction_counter());
-                    break;
-                }
-            }
+        if test_passed
+            && (min_traces_option.is_none()
+                || emu.instruction_counter() >= min_traces_option.unwrap())
+        {
+            info!("Ran {} number of traces", emu.instruction_counter());
+            break;
         }
     }
+
+    test_passed
+}
+
+fn test_blargg_with_gameboy_doctor(
+    rom_file_path: &str,
+    test_num: usize,
+    min_traces_option: Option<usize>,
+) {
+    let traces = trace_file_path(test_num);
+    let _guard = setup_gameboy_doctor_logger(&traces);
+
+    let test_passed = test_blargg_cpu_instrs(rom_file_path, min_traces_option);
 
     info!("Running gameboy-doctor");
     if cfg!(target_os = "windows") {
@@ -88,8 +100,8 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, test_num: usize, min_traces_optio
 }
 
 #[test]
-fn test_blargg_cpu_instrs_01() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_01() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/01-special.gb",
         1,
         Some(1257587),
@@ -97,8 +109,8 @@ fn test_blargg_cpu_instrs_01() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_02() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_02() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/02-interrupts.gb",
         2,
         Some(161057),
@@ -106,8 +118,8 @@ fn test_blargg_cpu_instrs_02() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_03() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_03() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/03-op sp,hl.gb",
         3,
         Some(1066160),
@@ -115,8 +127,8 @@ fn test_blargg_cpu_instrs_03() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_04() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_04() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/04-op r,imm.gb",
         4,
         Some(1260504),
@@ -124,8 +136,8 @@ fn test_blargg_cpu_instrs_04() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_05() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_05() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/05-op rp.gb",
         5,
         Some(1761126),
@@ -133,8 +145,8 @@ fn test_blargg_cpu_instrs_05() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_06() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_06() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/06-ld r,r.gb",
         6,
         Some(241011),
@@ -142,8 +154,8 @@ fn test_blargg_cpu_instrs_06() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_07() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_07() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb",
         7,
         Some(587415),
@@ -151,8 +163,8 @@ fn test_blargg_cpu_instrs_07() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_08() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_08() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/08-misc instrs.gb",
         8,
         Some(221630),
@@ -160,8 +172,8 @@ fn test_blargg_cpu_instrs_08() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_09() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_09() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/09-op r,r.gb",
         9,
         Some(4418120),
@@ -169,8 +181,8 @@ fn test_blargg_cpu_instrs_09() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_10() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_10() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/10-bit ops.gb",
         10,
         Some(6712461),
@@ -178,10 +190,17 @@ fn test_blargg_cpu_instrs_10() {
 }
 
 #[test]
-fn test_blargg_cpu_instrs_11() {
-    test_blargg_cpu_instrs(
+fn test_cpu_instrs_11() {
+    test_blargg_with_gameboy_doctor(
         "test_roms/blargg/cpu_instrs/individual/11-op a,(hl).gb",
         11,
         Some(7427500),
     );
+}
+
+#[test]
+fn test_cpu_instrs_full() {
+    let _guard = setup_default_logger();
+
+    test_blargg_cpu_instrs("test_roms/blargg/cpu_instrs/cpu_instrs.gb", None);
 }

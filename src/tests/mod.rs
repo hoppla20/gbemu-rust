@@ -34,12 +34,23 @@ where
     }
 }
 
-pub fn setup_logger(path: &PathBuf) -> dispatcher::DefaultGuard {
-    let layer_stdout = tracing_subscriber::fmt::Layer::default()
+pub fn logging_layer_stdout<S>() -> Box<dyn Layer<S> + Send + Sync>
+where
+    S: tracing_core::Subscriber,
+    for<'a> S: LookupSpan<'a>,
+{
+    tracing_subscriber::fmt::layer()
         .pretty()
         .with_writer(std::io::stdout)
-        .with_filter(EnvFilter::from_default_env());
+        .with_filter(EnvFilter::from_default_env())
+        .boxed()
+}
 
+pub fn logging_layer_gameboy_doctor<S>(path: &PathBuf) -> Box<dyn Layer<S> + Send + Sync>
+where
+    S: tracing_core::Subscriber,
+    for<'a> S: LookupSpan<'a>,
+{
     if let Some(parent_dir) = path.parent() {
         if !parent_dir.try_exists().unwrap() {
             std::fs::create_dir_all(parent_dir).unwrap();
@@ -52,17 +63,31 @@ pub fn setup_logger(path: &PathBuf) -> dispatcher::DefaultGuard {
         .truncate(true)
         .open(path)
         .unwrap();
-    let layer_trace = tracing_subscriber::fmt::Layer::default()
+
+    tracing_subscriber::fmt::layer()
         .with_writer(trace_log_file)
         .without_time()
         .with_level(false)
         .with_target(false)
         .event_format(DoctorEventFormatter)
-        .with_filter(FilterFn::new(|metadata| metadata.name() == "cpu::state"));
+        .with_filter(FilterFn::new(|metadata| metadata.name() == "cpu::state"))
+        .boxed()
+}
 
+pub fn setup_default_logger() -> dispatcher::DefaultGuard {
+    let registry = tracing_subscriber::registry().with(logging_layer_stdout());
+
+    let guard = tracing::subscriber::set_default(registry);
+
+    info!("Logger initialized");
+
+    guard
+}
+
+pub fn setup_gameboy_doctor_logger(path: &PathBuf) -> dispatcher::DefaultGuard {
     let registry = tracing_subscriber::registry()
-        .with(layer_stdout)
-        .with(layer_trace);
+        .with(logging_layer_stdout())
+        .with(logging_layer_gameboy_doctor(path));
 
     let guard = tracing::subscriber::set_default(registry);
 

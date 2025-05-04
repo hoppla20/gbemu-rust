@@ -4,6 +4,7 @@
 
 mod utils;
 
+mod cartridge;
 mod cpu;
 mod emulator;
 mod graphics;
