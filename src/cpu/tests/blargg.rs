@@ -140,3 +140,12 @@ fn test_blargg_cpu_instrs_06() {
         Some(241011),
     );
 }
+
+#[test]
+fn test_blargg_cpu_instrs_07() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb",
+        7,
+        Some(587415),
+    );
+}
