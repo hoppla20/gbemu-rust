@@ -1,9 +1,9 @@
 use core::panic;
 use std::fmt::Debug;
 
-use crate::memory::mmu::Mmu;
 use crate::utils::bit_operations::extract_bits;
 use crate::utils::half_carry::half_carry_add_r8;
+use crate::{memory::mmu::Mmu, utils::half_carry::half_carry_add_r8_3};
 
 use super::{Cpu, ExecutionError, interrupts::Interrupt};
 
@@ -768,11 +768,20 @@ impl Cpu {
                 },
                 1 => {
                     let b = (self.registers.get_arithmetic_target_r16(operand) >> 8) as u8;
+                    let carry = if self.registers.get_flag_carry() {
+                        1
+                    } else {
+                        0
+                    };
                     let (temp, overflow) = self.registers.h.overflowing_add(b);
+                    let (temp, overflow_carry) = temp.overflowing_add(carry);
                     self.registers.set_flag_subtraction(false);
-                    self.registers
-                        .set_flag_half_carry(half_carry_add_r8(self.registers.h, b));
-                    self.registers.set_flag_carry(overflow);
+                    self.registers.set_flag_half_carry(half_carry_add_r8_3(
+                        self.registers.h,
+                        b,
+                        carry,
+                    ));
+                    self.registers.set_flag_carry(overflow || overflow_carry);
                     self.registers.h = temp;
                     Ok(true)
                 },
@@ -781,6 +790,7 @@ impl Cpu {
             Instruction::add_sp_i8 => match self.current_instruction_cycle {
                 0 => {
                     self.registers.z = self.read_byte_pc(mmu);
+                    self.z_sign = (self.registers.z >> 7) == 0x01;
                     Ok(false)
                 },
                 1 => {
@@ -795,13 +805,8 @@ impl Cpu {
                     Ok(false)
                 },
                 2 => {
-                    let adj = if (self.registers.z >> 7) == 0x01 {
-                        0xFF
-                    } else {
-                        0x00
-                    };
-                    self.registers.w = ((self.registers.pc >> 8) as u8)
-                        .wrapping_add(adj)
+                    self.registers.w = ((self.registers.sp >> 8) as u8)
+                        .wrapping_add(if self.z_sign { 0xFF } else { 0x00 })
                         .wrapping_add(if self.registers.get_flag_carry() {
                             1
                         } else {

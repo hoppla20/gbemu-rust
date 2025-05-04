@@ -16,16 +16,19 @@ pub struct Cpu {
     pub halted: bool,
 
     pub current_instruction: Instruction,
-    current_instruction_cycle: u8,
+    pub current_instruction_cycle: u8,
 
-    interrupt_enabled: bool,
-    interrupt_enable_pending: bool,
+    pub interrupt_enabled: bool,
+    pub interrupt_enable_pending: bool,
+
+    pub z_sign: bool,
 }
 
 impl Cpu {
     pub fn new_from_registers(registers: Registers) -> Self {
         Cpu {
             registers,
+            halted: false,
 
             current_instruction: Instruction::nop,
             current_instruction_cycle: 0,
@@ -33,7 +36,7 @@ impl Cpu {
             interrupt_enabled: false,
             interrupt_enable_pending: false,
 
-            halted: false,
+            z_sign: false,
         }
     }
 

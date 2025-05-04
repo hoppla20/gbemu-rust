@@ -15,7 +15,7 @@ fn trace_file_path(test_num: usize) -> PathBuf {
     Path::new(TRACES_DIR).join(format!("cpu_instrs_{:02}.log", test_num))
 }
 
-fn test_blargg_cpu_instrs(rom_file_path: &str, test_num: usize, max_traces_option: Option<usize>) {
+fn test_blargg_cpu_instrs(rom_file_path: &str, test_num: usize, min_traces_option: Option<usize>) {
     let traces = trace_file_path(test_num);
     let _guard = setup_logger(&traces);
 
@@ -50,10 +50,12 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, test_num: usize, max_traces_optio
         }
 
         cycle += 0;
-        if let Some(max_traces) = max_traces_option {
-            if emu.instruction_counter() >= max_traces {
-                info!("Ran {} number of traces", emu.instruction_counter());
-                break;
+        if test_passed {
+            if let Some(min_traces) = min_traces_option {
+                if emu.instruction_counter() >= min_traces {
+                    info!("Ran {} number of traces", emu.instruction_counter());
+                    break;
+                }
             }
         }
     }
@@ -108,6 +110,6 @@ fn test_blargg_cpu_instrs_03() {
     test_blargg_cpu_instrs(
         "test_roms/blargg/cpu_instrs/individual/03-op sp,hl.gb",
         3,
-        None,
+        Some(1066160),
     );
 }
