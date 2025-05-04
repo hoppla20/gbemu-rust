@@ -149,3 +149,21 @@ fn test_blargg_cpu_instrs_07() {
         Some(587415),
     );
 }
+
+#[test]
+fn test_blargg_cpu_instrs_08() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/08-misc instrs.gb",
+        8,
+        Some(221630),
+    );
+}
+
+#[test]
+fn test_blargg_cpu_instrs_09() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/09-op r,r.gb",
+        9,
+        Some(4418120),
+    );
+}

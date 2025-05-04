@@ -240,6 +240,7 @@ impl Registers {
 
     pub fn alu_rrca(&mut self) {
         self.alu_rrc_r8(ArithmeticOperand::A);
+        self.set_flag_zero(false);
     }
 
     pub fn alu_srl_r8(&mut self, operand: ArithmeticOperand) -> u8 {
@@ -259,10 +260,12 @@ impl Registers {
 
     pub fn alu_rla(&mut self) {
         self.alu_rl_r8(ArithmeticOperand::A);
+        self.set_flag_zero(false);
     }
 
     pub fn alu_rlca(&mut self) {
         self.alu_rlc_r8(ArithmeticOperand::A);
+        self.set_flag_zero(false);
     }
 
     pub fn alu_rr_r8(&mut self, operand: ArithmeticOperand) -> u8 {

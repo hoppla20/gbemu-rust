@@ -730,6 +730,27 @@ impl Cpu {
                 Ok(true)
             },
 
+            // carry flag
+            Instruction::ccf => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.set_flag_subtraction(false);
+                    self.registers.set_flag_half_carry(false);
+                    self.registers
+                        .set_flag_carry(!self.registers.get_flag_carry());
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+            Instruction::scf => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.set_flag_subtraction(false);
+                    self.registers.set_flag_half_carry(false);
+                    self.registers.set_flag_carry(true);
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+
             // 16-bit arithmetics
             Instruction::inc_r16 { operand } => match self.current_instruction_cycle {
                 0 => {
@@ -982,6 +1003,25 @@ impl Cpu {
             Instruction::ld_a_ind_r16mem { operand } => match self.current_instruction_cycle {
                 0 => {
                     self.registers.z = mmu.read_byte(self.registers.get_memory_operand(operand));
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.a = self.registers.z;
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+            Instruction::ldh_ind_c_a => match self.current_instruction_cycle {
+                0 => {
+                    mmu.write_byte(self.registers.c as u16 + 0xFF00, self.registers.a);
+                    Ok(false)
+                },
+                1 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ldh_a_ind_c => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = mmu.read_byte(self.registers.c as u16 + 0xFF00);
                     Ok(false)
                 },
                 1 => {
