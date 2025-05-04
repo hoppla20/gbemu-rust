@@ -44,13 +44,13 @@ impl Emulator {
         rom: Vec<u8>,
         cpu_option: Option<Cpu>,
         serial_option: Option<Box<dyn Serial>>,
-    ) -> Self {
+    ) -> Result<Self, String> {
         let serial = if let Some(s) = serial_option {
             s
         } else {
             Box::new(LogSerial::default())
         };
-        let mut mmu = Mmu::new(new_mbc_from_buffer(rom), serial);
+        let mut mmu = Mmu::new(new_mbc_from_buffer(rom)?, serial);
 
         let mut result = Self {
             cpu: if let Some(cpu) = cpu_option {
@@ -65,7 +65,7 @@ impl Emulator {
 
         result.init();
 
-        result
+        Ok(result)
     }
 
     #[instrument(level = "debug", skip_all, fields(instruction_counter = *self.instruction_counter.borrow(), instruction = format!("{:?}", self.cpu.current_instruction)))]

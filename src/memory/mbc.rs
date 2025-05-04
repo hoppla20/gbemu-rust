@@ -41,13 +41,15 @@ pub trait Mbc {
     fn write_ram(&mut self, address: u16, value: u8);
 }
 
-pub fn new_mbc_from_buffer(buffer: Vec<u8>) -> Box<dyn Mbc> {
+pub struct CreateError;
+
+pub fn new_mbc_from_buffer(buffer: Vec<u8>) -> Result<Box<dyn Mbc>, String> {
     let header = Into::<CartridgeHeader>::into(&buffer);
 
-    match header.mbc_type {
-        MbcType::Mbc0 => Box::new(Mbc0::new_from_buffer(buffer)),
+    Ok(match header.mbc_type {
+        MbcType::Mbc0 => Box::new(Mbc0::new_from_buffer(buffer)?),
         MbcType::Mbc1 { battery, .. } => {
-            Box::new(Mbc1::new_from_buffer(buffer, header.ram_banks, battery))
+            Box::new(Mbc1::new_from_buffer(buffer, header.ram_banks, battery)?)
         },
-    }
+    })
 }

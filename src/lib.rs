@@ -17,6 +17,7 @@ pub mod prelude {
     pub use super::emulator::Emulator;
     pub use super::memory::mbc::Mbc;
     pub use super::memory::mbc::Mbc0;
+    pub use super::memory::mbc::Mbc1;
     pub use super::memory::mmu::Mmu;
 }
 

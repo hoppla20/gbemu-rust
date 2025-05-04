@@ -34,7 +34,7 @@ fn test_arithmetics_simple() {
     rom_buffer[0..instructions.len()].copy_from_slice(&instructions);
 
     let cpu_zeroed = Cpu::new_zeroed();
-    let mut emu = Emulator::new_from_buffer(rom_buffer, Some(cpu_zeroed), None);
+    let mut emu = Emulator::new_from_buffer(rom_buffer, Some(cpu_zeroed), None).unwrap();
 
     emu.cpu.registers.a = 0b10;
     emu.cpu.registers.b = 0b01;

@@ -1,6 +1,3 @@
-use std::process::exit;
-use tracing::error;
-
 use super::Mbc;
 
 const ROM_SIZE: usize = 0x8000;
@@ -13,24 +10,23 @@ pub struct Mbc0 {
 
 impl Mbc0 {
     #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, String> {
         Self::new_from_buffer(vec![0; ROM_SIZE])
     }
 
-    pub fn new_from_buffer(buffer: Vec<u8>) -> Self {
+    pub fn new_from_buffer(buffer: Vec<u8>) -> Result<Self, String> {
         if buffer.len() != ROM_SIZE {
-            error!(
+            return Err(format!(
                 "The ROM buffer has to be {} bytes big. Got: {}",
                 ROM_SIZE,
                 buffer.len()
-            );
-            exit(1);
+            ));
         }
 
-        Mbc0 {
+        Ok(Mbc0 {
             rom: buffer,
             ram: vec![],
-        }
+        })
     }
 }
 
