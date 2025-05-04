@@ -2,7 +2,7 @@ use crate::{cpu::Cpu, emulator::Emulator};
 
 #[test]
 fn test_arithmetics_simple() {
-    let instructions = vec![
+    let instructions = [
         0x80, // ADD A, B
         0x90, // SUB A, B
         0x88, // ADC A, B
@@ -29,9 +29,11 @@ fn test_arithmetics_simple() {
         0xCB, // PREFIX
         0xA6, // RES 4, (HL)
     ];
+    let mut rom_buffer = vec![0; 32 * 1024];
+    rom_buffer[0..instructions.len()].copy_from_slice(&instructions);
 
     let cpu_zeroed = Cpu::new_zeroed();
-    let mut emu = Emulator::new_from_buffer(&instructions, Some(cpu_zeroed), None);
+    let mut emu = Emulator::new_from_buffer(rom_buffer, Some(cpu_zeroed), None);
 
     emu.cpu.registers.a = 0b10;
     emu.cpu.registers.b = 0b01;

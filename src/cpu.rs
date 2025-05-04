@@ -84,7 +84,7 @@ impl Cpu {
                 self.current_instruction_cycle = 0;
                 Ok(true)
             } else {
-                self.current_instruction_cycle += 1;
+                self.current_instruction_cycle = self.current_instruction_cycle.wrapping_add(1);
                 Ok(false)
             }
         } else {
@@ -107,12 +107,7 @@ impl Cpu {
 
             debug!(name: "cpu::fetch::decode", "Decoding opcode 0x{:02X}", opcode);
 
-            match self.current_instruction {
-                Instruction::prefix => {
-                    self.current_instruction = Instruction::decode_prefix_instruction(opcode);
-                },
-                _ => self.current_instruction = Instruction::decode_instruction(opcode),
-            }
+            self.current_instruction = Instruction::decode_instruction(opcode);
         }
 
         self.current_instruction_cycle = 0;

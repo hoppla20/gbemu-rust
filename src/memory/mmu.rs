@@ -125,7 +125,14 @@ impl Mmu {
                 0xFF49 => return self.graphics.registers.obj_palette[1],
                 0xFF4A => return self.graphics.registers.window_y,
                 0xFF4B => return self.graphics.registers.window_x,
-                _ => todo!("Implement i/o register read at address 0x{:02X}", address),
+                _ => {
+                    debug!(
+                        name: "mmu::address::noimpl",
+                        "Reading from not implemented i/o register 0x{:02X}",
+                        address
+                    );
+                    return 0xFF;
+                },
             }
         }
 
@@ -149,8 +156,7 @@ impl Mmu {
 
     pub fn write_byte(&mut self, address: u16, value: u8) {
         if address < V_RAM_ADDR {
-            // rom is read-only, do nothing
-
+            self.mbc.write_rom(address, value);
             return;
         }
 
@@ -287,7 +293,13 @@ impl Mmu {
                     self.graphics.registers.window_x = value;
                     return;
                 },
-                _ => todo!("Implement i/o register read from address 0x{:02X}", address),
+                _ => {
+                    debug!(
+                        name: "mmu::address::noimpl",
+                        "Writing to not implemented i/o register 0x{:02X}",
+                        address
+                    );
+                },
             }
         }
 

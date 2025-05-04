@@ -1,4 +1,4 @@
-use tracing::debug;
+use tracing::info;
 
 pub trait Serial {
     fn write(&mut self, c: char);
@@ -21,7 +21,7 @@ impl Serial for LogSerial {
 
     fn transfer(&mut self, serial_transfer_control: &mut u8) {
         if self.current == '\n' {
-            debug!(name: "serial::transfer", "Serial output: '{}'", self.buffer);
+            info!(name: "serial::transfer", "{}", self.buffer);
             self.last_buffer = self.buffer.clone();
             self.buffer.clear();
         } else {

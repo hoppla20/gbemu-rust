@@ -1,12 +1,29 @@
-use std::{cell::RefCell, fmt::Debug};
+use crate::cpu::Cpu;
+use crate::cpu::instructions::Instruction;
+use crate::cpu::interrupts::Interrupt;
+use crate::memory::mbc::new_mbc_from_buffer;
+use crate::memory::mmu::Mmu;
+use crate::serial::LogSerial;
+use crate::serial::Serial;
 
-use tracing::{instrument, trace};
+use std::cell::RefCell;
+use std::fmt::Debug;
+use tracing::instrument;
+use tracing::trace;
 
-use crate::{
-    cpu::{Cpu, instructions::Instruction, interrupts::Interrupt},
-    memory::{mbc::Mbc0, mmu::Mmu},
-    serial::{LogSerial, Serial},
-};
+macro_rules! trace_cpu_state {
+    ($self:ident) => {
+        trace!(
+            name: "cpu::state",
+            "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+            $self.cpu,
+            $self.mmu.read_byte($self.cpu.registers.pc),
+            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(1)),
+            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(2)),
+            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(3)),
+        )
+    };
+}
 
 #[derive(Debug)]
 pub enum ExecutionError {
@@ -24,17 +41,16 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new_from_buffer(
-        rom: &[u8],
+        rom: Vec<u8>,
         cpu_option: Option<Cpu>,
         serial_option: Option<Box<dyn Serial>>,
     ) -> Self {
-        let mbc = Mbc0::new_from_buffer(rom);
         let serial = if let Some(s) = serial_option {
             s
         } else {
             Box::new(LogSerial::default())
         };
-        let mut mmu = Mmu::new(Box::new(mbc), serial);
+        let mut mmu = Mmu::new(new_mbc_from_buffer(rom), serial);
 
         let mut result = Self {
             cpu: if let Some(cpu) = cpu_option {
@@ -47,24 +63,21 @@ impl Emulator {
             instruction_counter: RefCell::new(0),
         };
 
-        trace!(
-            name: "cpu::state",
-            "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
-            result.cpu,
-            result.mmu.read_byte(result.cpu.registers.pc),
-            result.mmu.read_byte(result.cpu.registers.pc.wrapping_add(1)),
-            result.mmu.read_byte(result.cpu.registers.pc.wrapping_add(2)),
-            result.mmu.read_byte(result.cpu.registers.pc.wrapping_add(3)),
-        );
-
-        result.cpu.current_instruction =
-            Instruction::decode_instruction(result.mmu.read_byte(result.cpu.registers.pc));
-        (result.cpu.registers.pc, _) = result.cpu.registers.pc.overflowing_add(1);
+        result.init();
 
         result
     }
 
-    #[instrument(level = "debug", skip_all, fields(counter = *self.instruction_counter.borrow(), instruction = format!("{:?}", self.cpu.current_instruction)))]
+    #[instrument(level = "debug", skip_all, fields(instruction_counter = *self.instruction_counter.borrow(), instruction = format!("{:?}", self.cpu.current_instruction)))]
+    pub fn init(&mut self) {
+        trace_cpu_state!(self);
+
+        self.cpu.current_instruction =
+            Instruction::decode_instruction(self.mmu.read_byte(self.cpu.registers.pc));
+        (self.cpu.registers.pc, _) = self.cpu.registers.pc.overflowing_add(1);
+    }
+
+    #[instrument(level = "debug", skip_all, fields(instruction_counter = *self.instruction_counter.borrow(), instruction = format!("{:?}", self.cpu.current_instruction)))]
     pub fn step(&mut self) -> Result<(), ExecutionError> {
         let mut cpu_completed = false;
         if !self.cpu.halted {
@@ -82,20 +95,11 @@ impl Emulator {
 
         if !self.cpu.halted && cpu_completed {
             match self.cpu.current_instruction {
-                Instruction::prefix => {},
                 Instruction::isr { .. } => {},
                 _ => {
                     *self.instruction_counter.borrow_mut() += 1;
 
-                    trace!(
-                        name: "cpu::state",
-                        "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
-                        self.cpu,
-                        self.mmu.read_byte(self.cpu.registers.pc),
-                        self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(1)),
-                        self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(2)),
-                        self.mmu.read_byte(self.cpu.registers.pc.wrapping_add(3)),
-                    );
+                    trace_cpu_state!(self);
                 },
             }
 

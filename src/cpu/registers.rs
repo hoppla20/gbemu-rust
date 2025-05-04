@@ -74,11 +74,11 @@ impl Registers {
             Register::L => self.l = value,
             Register::W => {
                 error!("Writing into register W is not allowed with this method!");
-                exit(500);
+                exit(1);
             },
             Register::Z => {
                 error!("Writing into register Z is not allowed with this method!");
-                exit(500);
+                exit(1);
             },
         }
     }
