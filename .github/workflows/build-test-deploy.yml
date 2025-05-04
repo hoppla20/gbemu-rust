@@ -71,7 +71,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: llvm-cov
-          args: nextest --html
+          args: nextest --cargo-profile release --html
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
