@@ -1,6 +1,5 @@
 // TODO: Remove at a later point
 #![allow(dead_code)]
-#![allow(unused_macros)]
 
 mod cartridge;
 mod cpu;
