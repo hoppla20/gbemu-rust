@@ -199,6 +199,7 @@ fn test_cpu_instrs_11() {
 }
 
 #[test]
+#[ignore = "manual only"]
 fn test_cpu_instrs_full() {
     let _guard = setup_default_logger();
 
