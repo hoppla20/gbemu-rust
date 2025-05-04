@@ -1,28 +1,6 @@
-[package]
-name = "gbemu_rust"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "2"
+members = ["gbemu_rust_app", "gbemu_rust_lib"]
 
-[profile.dev]
-opt-level = 0
-
-[profile.test]
-opt-level = 0
-
-[profile.bench]
-opt-level = 3
-
-[profile.release]
-opt-level = 3
-
-[[bench]]
-name = "bench_step"
-harness = false
-
-[dependencies]
-criterion = "0.5.1"
-regex = "1.11.1"
-tracing = "0.1.41"
-tracing-appender = "0.2.3"
-tracing-core = "0.1.33"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+[workspace.dependencies]
+gbemu_rust_lib = { path = "gbemu_rust_lib" }

@@ -4,9 +4,9 @@ use std::{
 };
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use gbemu_rust::prelude::*;
+use gbemu_rust_lib::prelude::*;
 
-const ROM_FILE_PATH: &str = "test_roms/blargg/cpu_instrs/cpu_instrs.gb";
+const ROM_FILE_PATH: &str = "../test_roms/blargg/cpu_instrs/cpu_instrs.gb";
 
 pub fn bench_blargg_cpu_instrs_full(c: &mut Criterion) {
     let f = File::open(ROM_FILE_PATH).unwrap();

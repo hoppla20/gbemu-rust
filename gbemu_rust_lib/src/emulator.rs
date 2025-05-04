@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fmt::Debug;
 use tracing::instrument;
 use tracing::trace;
@@ -35,8 +34,6 @@ pub enum ExecutionError {
 pub struct Emulator {
     pub cpu: Cpu,
     pub mmu: Mmu,
-
-    instruction_counter: RefCell<usize>,
 }
 
 impl Emulator {
@@ -59,8 +56,6 @@ impl Emulator {
                 Cpu::new(&mut mmu)
             },
             mmu,
-
-            instruction_counter: RefCell::new(0),
         };
 
         result.init();
@@ -68,7 +63,7 @@ impl Emulator {
         Ok(result)
     }
 
-    #[instrument(level = "debug", skip_all, fields(instruction_counter = *self.instruction_counter.borrow(), instruction = format!("{:?}", self.cpu.current_instruction)))]
+    #[instrument(level = "debug", skip_all)]
     pub fn init(&mut self) {
         trace_cpu_state!(self);
 
@@ -77,7 +72,7 @@ impl Emulator {
         (self.cpu.registers.pc, _) = self.cpu.registers.pc.overflowing_add(1);
     }
 
-    #[instrument(level = "debug", skip_all, fields(instruction_counter = *self.instruction_counter.borrow(), instruction = format!("{:?}", self.cpu.current_instruction)))]
+    #[instrument(level = "debug", skip_all, fields(instruction = format!("{:?}", self.cpu.current_instruction)))]
     pub fn step(&mut self) -> Result<(), ExecutionError> {
         let mut cpu_completed = false;
         if !self.cpu.halted {
@@ -97,8 +92,6 @@ impl Emulator {
             match self.cpu.current_instruction {
                 Instruction::isr { .. } => {},
                 _ => {
-                    *self.instruction_counter.borrow_mut() += 1;
-
                     trace_cpu_state!(self);
                 },
             }
@@ -107,10 +100,6 @@ impl Emulator {
         }
 
         Ok(())
-    }
-
-    pub fn instruction_counter(&self) -> usize {
-        *self.instruction_counter.borrow()
     }
 }
 
