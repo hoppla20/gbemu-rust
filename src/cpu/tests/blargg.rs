@@ -122,3 +122,12 @@ fn test_blargg_cpu_instrs_04() {
         Some(1260504),
     );
 }
+
+#[test]
+fn test_blargg_cpu_instrs_05() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/05-op rp.gb",
+        5,
+        Some(1761126),
+    );
+}
