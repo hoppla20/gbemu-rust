@@ -15,7 +15,12 @@ opt-level = 3
 [profile.release]
 opt-level = 3
 
+[[bench]]
+name = "bench_step"
+harness = false
+
 [dependencies]
+criterion = "0.5.1"
 regex = "1.11.1"
 tracing = "0.1.41"
 tracing-appender = "0.2.3"

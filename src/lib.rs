@@ -14,7 +14,8 @@ mod timer;
 
 pub mod prelude {
     pub use super::{
-        cpu::Cpu, cpu::registers::Registers, memory::mbc::Mbc, memory::mbc::Mbc0, memory::mmu::Mmu,
+        cpu::Cpu, cpu::registers::Registers, emulator::Emulator, memory::mbc::Mbc,
+        memory::mbc::Mbc0, memory::mmu::Mmu,
     };
 }
 

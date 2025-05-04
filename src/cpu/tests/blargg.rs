@@ -30,10 +30,10 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, min_traces_option: Option<usize>)
     let re_failed = Regex::new(r"^Failed").unwrap();
     let re_passed = Regex::new(r"^Passed").unwrap();
     let mut test_passed = false;
-    let mut cycle = 0;
+    let mut steps = 0;
     loop {
         if let Err(err) = emu.step() {
-            warn!("Encountered error on cycle {}: {:02X?}", cycle, err);
+            warn!("Encountered error on cycle {}: {:02X?}", steps, err);
             test_passed = false;
             break;
         }
@@ -49,12 +49,16 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, min_traces_option: Option<usize>)
             test_passed = true;
         }
 
-        cycle += 0;
+        steps += 1;
         if test_passed
             && (min_traces_option.is_none()
                 || emu.instruction_counter() >= min_traces_option.unwrap())
         {
-            info!("Ran {} number of traces", emu.instruction_counter());
+            info!(
+                "Ran {} number of steps ({} traces)",
+                steps,
+                emu.instruction_counter()
+            );
             break;
         }
     }
