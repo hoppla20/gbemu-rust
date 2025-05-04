@@ -2,7 +2,7 @@ mod mbc0;
 mod mbc1;
 
 pub use mbc0::Mbc0;
-use mbc1::Mbc1;
+pub use mbc1::Mbc1;
 
 use crate::cartridge::CartridgeHeader;
 

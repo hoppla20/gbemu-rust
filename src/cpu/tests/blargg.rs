@@ -1,11 +1,12 @@
 use regex::Regex;
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-    path::{Path, PathBuf},
-    process::Command,
-};
-use tracing::{info, warn};
+use std::fs::File;
+use std::io::BufReader;
+use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command;
+use tracing::info;
+use tracing::warn;
 
 use crate::{
     emulator::Emulator,

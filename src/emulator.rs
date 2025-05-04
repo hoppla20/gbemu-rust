@@ -1,3 +1,8 @@
+use std::cell::RefCell;
+use std::fmt::Debug;
+use tracing::instrument;
+use tracing::trace;
+
 use crate::cpu::Cpu;
 use crate::cpu::instructions::Instruction;
 use crate::cpu::interrupts::Interrupt;
@@ -5,11 +10,6 @@ use crate::memory::mbc::new_mbc_from_buffer;
 use crate::memory::mmu::Mmu;
 use crate::serial::LogSerial;
 use crate::serial::Serial;
-
-use std::cell::RefCell;
-use std::fmt::Debug;
-use tracing::instrument;
-use tracing::trace;
 
 macro_rules! trace_cpu_state {
     ($self:ident) => {

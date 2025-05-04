@@ -1,6 +1,7 @@
-use crate::utils::half_carry::{
-    half_carry_add_r8, half_carry_add_r8_3, half_carry_sub_r8, half_carry_sub_r8_3,
-};
+use crate::utils::half_carry::half_carry_add_r8;
+use crate::utils::half_carry::half_carry_add_r8_3;
+use crate::utils::half_carry::half_carry_sub_r8;
+use crate::utils::half_carry::half_carry_sub_r8_3;
 
 use super::{
     instructions::ArithmeticOperand, instructions::ArithmeticOperand16, registers::Registers,

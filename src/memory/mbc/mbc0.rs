@@ -1,5 +1,4 @@
 use std::process::exit;
-
 use tracing::error;
 
 use super::Mbc;

@@ -1,7 +1,7 @@
 use std::process::exit;
+use tracing::error;
 
 use super::instructions::{Condition, MemoryOperand16, StackOperand16};
-use tracing::error;
 
 const FLAG_ZERO_BYTE_POS: u8 = 7;
 const FLAG_SUBTRACTION_BYTE_POS: u8 = 6;

@@ -1,6 +1,5 @@
 use core::panic;
 use std::fmt::Debug;
-
 use tracing::debug;
 
 use crate::emulator::ExecutionError;

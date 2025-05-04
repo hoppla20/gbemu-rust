@@ -1,4 +1,5 @@
-use crate::{cpu::Cpu, emulator::Emulator};
+use crate::cpu::Cpu;
+use crate::emulator::Emulator;
 
 #[test]
 fn test_arithmetics_simple() {

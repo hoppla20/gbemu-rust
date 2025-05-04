@@ -1,5 +1,4 @@
 use std::process::exit;
-
 use tracing::error;
 
 use crate::memory::{E_RAM_BANK_SIZE, ROM_BANK_SIZE};
