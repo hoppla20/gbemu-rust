@@ -898,8 +898,13 @@ impl Cpu {
                     Ok(false)
                 },
                 1 => {
-                    self.registers
-                        .set_arithmetic_target_r8(operand, self.registers.z);
+                    if let ArithmeticOperand::IND_HL = operand {
+                        mmu.write_byte(self.registers.get_hl(), self.registers.z);
+                    } else {
+                        self.registers
+                            .set_arithmetic_target_r8(operand, self.registers.z);
+                    }
+
                     Ok(true)
                 },
                 _ => panic_execuction!(),

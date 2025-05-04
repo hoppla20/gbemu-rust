@@ -64,7 +64,7 @@ impl Emulator {
         result
     }
 
-    #[instrument(level = "trace", skip_all, fields(counter = *self.instruction_counter.borrow()))]
+    #[instrument(level = "debug", skip_all, fields(counter = *self.instruction_counter.borrow(), instruction = format!("{:?}", self.cpu.current_instruction)))]
     pub fn step(&mut self) -> Result<(), ExecutionError> {
         let mut cpu_completed = false;
         if !self.cpu.halted {

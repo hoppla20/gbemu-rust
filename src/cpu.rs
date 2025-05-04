@@ -9,7 +9,7 @@ use crate::emulator::ExecutionError;
 use crate::memory::mmu::Mmu;
 
 use std::fmt::Debug;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 pub struct Cpu {
     pub registers: Registers,
@@ -92,6 +92,7 @@ impl Cpu {
         }
     }
 
+    #[instrument(level = "debug", skip_all)]
     pub fn generic_fetch(&mut self, mmu: &mut Mmu) -> Result<(), ExecutionError> {
         if let Some(interrupt) = self.interrupt_check(mmu) {
             debug!(
@@ -104,7 +105,7 @@ impl Cpu {
         } else {
             let opcode = self.read_byte_pc(mmu);
 
-            debug!(name: "cpu::instruction", "Decoding opcode 0x{:02X}", opcode);
+            debug!(name: "cpu::fetch::decode", "Decoding opcode 0x{:02X}", opcode);
 
             match self.current_instruction {
                 Instruction::prefix => {
@@ -113,8 +114,6 @@ impl Cpu {
                 _ => self.current_instruction = Instruction::decode_instruction(opcode),
             }
         }
-
-        debug!(name: "cpu::instruction", "Decoded instruction {:02X?}", self.current_instruction);
 
         self.current_instruction_cycle = 0;
 

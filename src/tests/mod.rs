@@ -36,6 +36,7 @@ where
 
 pub fn setup_logger(path: &PathBuf) -> dispatcher::DefaultGuard {
     let layer_stdout = tracing_subscriber::fmt::Layer::default()
+        .pretty()
         .with_writer(std::io::stdout)
         .with_filter(EnvFilter::from_default_env());
 

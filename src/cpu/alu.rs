@@ -17,7 +17,6 @@ impl Registers {
             ArithmeticOperand::E => self.e,
             ArithmeticOperand::H => self.h,
             ArithmeticOperand::L => self.l,
-            // before calling alu_* operation, load value into intermediate register Z
             ArithmeticOperand::IND_HL => self.z,
             ArithmeticOperand::A => self.a,
         }
@@ -31,9 +30,7 @@ impl Registers {
             ArithmeticOperand::E => self.e = value,
             ArithmeticOperand::H => self.h = value,
             ArithmeticOperand::L => self.l = value,
-            ArithmeticOperand::IND_HL => {
-                panic!("Writing into register Z is not allowed with this function!")
-            },
+            ArithmeticOperand::IND_HL => self.z = value,
             ArithmeticOperand::A => self.a = value,
         }
     }
