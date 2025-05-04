@@ -140,3 +140,48 @@ fn test_blargg_cpu_instrs_06() {
         Some(241011),
     );
 }
+
+#[test]
+fn test_blargg_cpu_instrs_07() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb",
+        7,
+        Some(587415),
+    );
+}
+
+#[test]
+fn test_blargg_cpu_instrs_08() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/08-misc instrs.gb",
+        8,
+        Some(221630),
+    );
+}
+
+#[test]
+fn test_blargg_cpu_instrs_09() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/09-op r,r.gb",
+        9,
+        Some(4418120),
+    );
+}
+
+#[test]
+fn test_blargg_cpu_instrs_10() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/10-bit ops.gb",
+        10,
+        Some(6712461),
+    );
+}
+
+#[test]
+fn test_blargg_cpu_instrs_11() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/11-op a,(hl).gb",
+        11,
+        Some(7427500),
+    );
+}

@@ -530,7 +530,7 @@ impl Instruction {
             0xFE => Self::cp_a_n8,
 
             0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => Self::rst_tgt3 {
-                target_address: (extract_bits!(opcode: u8, 3, 4) as u16) * 8,
+                target_address: (extract_bits!(opcode: u8, 3, 5) as u16) * 8,
             },
 
             _ => Instruction::unknown_opcode { opcode },
@@ -728,6 +728,27 @@ impl Cpu {
             Instruction::rra => {
                 self.registers.alu_rra();
                 Ok(true)
+            },
+
+            // carry flag
+            Instruction::ccf => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.set_flag_subtraction(false);
+                    self.registers.set_flag_half_carry(false);
+                    self.registers
+                        .set_flag_carry(!self.registers.get_flag_carry());
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
+            Instruction::scf => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.set_flag_subtraction(false);
+                    self.registers.set_flag_half_carry(false);
+                    self.registers.set_flag_carry(true);
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
             },
 
             // 16-bit arithmetics
@@ -990,6 +1011,25 @@ impl Cpu {
                 },
                 _ => panic_execuction!(),
             },
+            Instruction::ldh_ind_c_a => match self.current_instruction_cycle {
+                0 => {
+                    mmu.write_byte(self.registers.c as u16 + 0xFF00, self.registers.a);
+                    Ok(false)
+                },
+                1 => Ok(true),
+                _ => panic_execuction!(),
+            },
+            Instruction::ldh_a_ind_c => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.z = mmu.read_byte(self.registers.c as u16 + 0xFF00);
+                    Ok(false)
+                },
+                1 => {
+                    self.registers.a = self.registers.z;
+                    Ok(true)
+                },
+                _ => panic_execuction!(),
+            },
             Instruction::ldh_ind_n8_a => match self.current_instruction_cycle {
                 0 => {
                     self.registers.z = self.read_byte_pc(mmu);
@@ -1236,6 +1276,24 @@ impl Cpu {
                 5 => Ok(true),
                 _ => panic_execuction!(),
             },
+            Instruction::rst_tgt3 { target_address } => match self.current_instruction_cycle {
+                0 => {
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                1 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc >> 8) as u8);
+                    self.registers.sp -= 1;
+                    Ok(false)
+                },
+                2 => {
+                    mmu.write_byte(self.registers.sp, (self.registers.pc & 0x00FF) as u8);
+                    self.registers.pc = target_address;
+                    Ok(false)
+                },
+                3 => Ok(true),
+                _ => panic_execuction!(),
+            },
             Instruction::ret => match self.current_instruction_cycle {
                 0 => {
                     self.registers.z = mmu.read_byte(self.registers.sp);
@@ -1256,11 +1314,13 @@ impl Cpu {
             },
             Instruction::reti => match self.current_instruction_cycle {
                 0 => {
-                    self.registers.z = self.read_byte_pc(mmu);
+                    self.registers.z = mmu.read_byte(self.registers.sp);
+                    self.registers.sp += 1;
                     Ok(false)
                 },
                 1 => {
-                    self.registers.w = self.read_byte_pc(mmu);
+                    self.registers.w = mmu.read_byte(self.registers.sp);
+                    self.registers.sp += 1;
                     Ok(false)
                 },
                 2 => {
