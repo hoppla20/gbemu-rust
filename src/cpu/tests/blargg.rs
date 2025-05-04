@@ -45,14 +45,14 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, test_num: usize, max_traces_optio
         }
 
         if !test_passed && re_passed.is_match(emu.mmu.serial.get_last_buffer()) {
-            info!("Tests passed after {} traces!", emu.trace_counter());
+            info!("Tests passed after {} traces!", emu.instruction_counter());
             test_passed = true;
         }
 
         cycle += 0;
         if let Some(max_traces) = max_traces_option {
-            if emu.trace_counter() >= max_traces {
-                info!("Ran {} number of traces", emu.trace_counter());
+            if emu.instruction_counter() >= max_traces {
+                info!("Ran {} number of traces", emu.instruction_counter());
                 break;
             }
         }

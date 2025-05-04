@@ -92,6 +92,7 @@ impl Cpu {
     pub fn generic_fetch(&mut self, mmu: &mut Mmu) -> Result<(), ExecutionError> {
         if let Some(interrupt) = self.interrupt_check(mmu) {
             debug!(
+                name: "cpu::interrupt",
                 "Executing interrupt service routing for interrupt {:?}",
                 interrupt
             );
@@ -100,7 +101,7 @@ impl Cpu {
         } else {
             let opcode = self.read_byte_pc(mmu);
 
-            debug!("Decoding opcode 0x{:02X}", opcode);
+            debug!(name: "cpu::instruction", "Decoding opcode 0x{:02X}", opcode);
 
             match self.current_instruction {
                 Instruction::prefix => {
@@ -110,7 +111,7 @@ impl Cpu {
             }
         }
 
-        debug!("Decoded instruction {:02X?}", self.current_instruction);
+        debug!(name: "cpu::instruction", "Decoded instruction {:02X?}", self.current_instruction);
 
         self.current_instruction_cycle = 0;
 
