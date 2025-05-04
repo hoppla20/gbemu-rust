@@ -162,20 +162,47 @@
 <li><a href="./code-coverage-report">Code Coverage</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><h1 id="testing"><a class="header" href="#testing">Testing</a></h1>
-<h2 id="local-machine"><a class="header" href="#local-machine">Local machine</a></h2>
-<p>Examples:</p>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting started</a></h2>
 <pre><code class="language-bash"># run all tests
 cargo test
 
 # run unit tests for the module cpu::alu
 cargo test --lib cpu::alu
 
-# run blargg cpu_instrs 01
-cargo test --tests test_blargg_cpu_instrs_01
+# run all (non-ingored) blargg cpu_instrs tests
+cargo test --tests cpu::tests::blargg
 
-# run ignored test blargg cpu_instrs 02 with debug log
-RUST_DEBUG=debug cargo test --tests test_blargg_cpu_instrs_02 -- --include-ignored
+# run blargg cpu_instrs test 01 without logs
+cargo test --tests cpu::tests::blargg::test_blargg_cpu_instrs_01
+
+# run blargg cpu_instrs test 02 with info log
+RUST_DEBUG=info cargo test --tests test_blargg_cpu_instrs_02
 </code></pre>
+<p>Note:</p>
+<ul>
+<li><strong>all tests run without compiler optimizations</strong></li>
+<li>in order to run with release profile (with compiler optimizations) use the <code>--profile</code> argument
+for <code>cargo test</code></li>
+</ul>
+<h2 id="blargg-cpu_instrs-tests"><a class="header" href="#blargg-cpu_instrs-tests">Blargg cpu_instrs tests</a></h2>
+<p>The <code>cpu::tests::blargg::test_cpu_instrs_XY</code> are configured to log <code>cpu::state</code> events with <code>trace</code>
+level to <code>traces/cpu_instrs_XY.log</code> in the root directory of this project. After running a certain
+amount of cycles (determined per test) the tests calls
+<a href="https://github.com/robert/gameboy-doctor">gameboy-doctor</a>.</p>
+<p>In addition to the individual tests, the test <code>cpu::tests::blargg::test_cpu_instrs_full</code> runs
+the whole suite, however without gameboy-doctor and without logging to a file. The full test is marked
+as ignored because all individual tests are already in their own test function. You can however run
+the full test manually:</p>
+<pre><code class="language-bash"># run full blarg cpu_instrs test with info logs
+RUST_DEBUG=info cargo test --tests cpu::tests::blargg::test_cpu_instrs_full -- --include-ignored
+</code></pre>
+<h2 id="benchmarks"><a class="header" href="#benchmarks">Benchmarks</a></h2>
+<p>There is also a benchmark which collects runtime statistics about the <code>emulator::step</code> function:</p>
+<pre><code class="language-bash"># run the bench_step benchmark
+cargo bench --bench bench_step
+</code></pre>
+<p>This command will output statistics about the runtime of the <code>emulator::step</code> function. A more detailed
+report can be found under <code>target/criterion/report/index.html</code>.</p>
 
                     </main>
 
