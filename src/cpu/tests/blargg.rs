@@ -167,3 +167,21 @@ fn test_blargg_cpu_instrs_09() {
         Some(4418120),
     );
 }
+
+#[test]
+fn test_blargg_cpu_instrs_10() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/10-bit ops.gb",
+        10,
+        Some(6712461),
+    );
+}
+
+#[test]
+fn test_blargg_cpu_instrs_11() {
+    test_blargg_cpu_instrs(
+        "test_roms/blargg/cpu_instrs/individual/11-op a,(hl).gb",
+        11,
+        Some(7427500),
+    );
+}
