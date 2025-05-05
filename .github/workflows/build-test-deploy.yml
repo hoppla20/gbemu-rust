@@ -29,7 +29,9 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Build
-        run: nix develop --command cargo build --profile release
+        run: >-
+          nix develop --command
+          cargo build --profile release
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -74,7 +76,9 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Run tests and generate coverage
-        run: nix develop --command cargo llvm-cov nextest --cargo-profile release --html
+        run: >-
+          nix develop --command
+          cargo llvm-cov nextest --cargo-profile release --no-cfg-coverage --html
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
