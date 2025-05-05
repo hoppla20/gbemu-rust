@@ -3,4 +3,10 @@ resolver = "2"
 members = ["gbemu_rust_app", "gbemu_rust_lib"]
 
 [workspace.dependencies]
-gbemu_rust_lib = { path = "gbemu_rust_lib" }
+criterion = "0.5"
+regex = "1.11"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-core = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = "1.0"

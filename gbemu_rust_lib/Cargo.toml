@@ -8,9 +8,10 @@ name = "bench_step"
 harness = false
 
 [dependencies]
-criterion = "0.5.1"
-regex = "1.11.1"
-tracing = "0.1.41"
-tracing-appender = "0.2.3"
-tracing-core = "0.1.33"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+criterion.workspace = true
+regex.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-core.workspace = true
+tracing-subscriber.workspace = true
+serde.workspace = true

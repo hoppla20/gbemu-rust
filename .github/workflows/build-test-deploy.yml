@@ -65,6 +65,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
       - name: Run tests and generate coverage
