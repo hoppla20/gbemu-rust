@@ -2,3 +2,6 @@ target/
 
 traces/
 *.log
+
+.envrc
+.direnv/

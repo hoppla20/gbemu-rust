@@ -23,16 +23,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
         with:
-          toolchain: stable
+          nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Build
-        uses: actions-rs/cargo@v1
+        run: nix develop --command cargo build --profile release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          command: build
-          args: --profile release
+          name: gbemu_rust
+          path: ./target/release/gbemu_rust
 
   build-docs:
     runs-on: ubuntu-latest
@@ -65,17 +68,13 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
         with:
-          toolchain: stable
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - uses: taiki-e/install-action@nextest
+          nix_path: nixpkgs=channel:nixos-unstable
+
       - name: Run tests and generate coverage
-        uses: actions-rs/cargo@v1
-        with:
-          command: llvm-cov
-          args: nextest --cargo-profile release --html
+        run: nix develop --command cargo llvm-cov nextest --cargo-profile release --html
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
