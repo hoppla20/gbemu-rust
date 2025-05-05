@@ -12,8 +12,8 @@
     <!-- config for our rust wasm binary. go to https://trunkrs.dev/assets/#rust for more customization -->
     
 <script type="module">
-import init, * as bindings from '/gbemu_rust_app-7e3b3e49c7646aa2.js';
-const wasm = await init({ module_or_path: '/gbemu_rust_app-7e3b3e49c7646aa2_bg.wasm' });
+import init, * as bindings from 'https://hoppla20.github.io/gbemu-rust/pr/pr-14/app/gbemu_rust_app.js';
+const wasm = await init({ module_or_path: 'https://hoppla20.github.io/gbemu-rust/pr/pr-14/app/gbemu_rust_app_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -23,7 +23,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
     <!-- this is the base url relative to which other urls will be constructed. trunk will insert this from the public-url option -->
-    <base href="/" />
+    <base href="https://hoppla20.github.io/gbemu-rust/pr/pr-14/app/" />
 
     <!-- TODO: icons -->
     <!-- <link data-trunk rel="icon" href="assets/favicon.ico"> -->
@@ -39,8 +39,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
     <link rel="manifest" href="manifest.json">
 :   <!-- <link rel="apple-touch-icon" href="assets/icon_ios_touch_192.png"> -->
-    <!-- <meta name="theme-color" media="(prefers-color-scheme: light)" content="white"> -->
-    <!-- <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#404040"> -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#404040">
 
     <style>
         html {
@@ -128,7 +128,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
         }
     </style>
-<link rel="modulepreload" href="/gbemu_rust_app-7e3b3e49c7646aa2.js" crossorigin="anonymous" integrity="sha384-r86lpyAQDWzIRmuGB08KX8eFz/U2pbuvU0m6vyG6Q+Rd2TuUnQ7h4j6VpwajdDz4"><link rel="preload" href="/gbemu_rust_app-7e3b3e49c7646aa2_bg.wasm" crossorigin="anonymous" integrity="sha384-v+IFedOQWR3Jhu96imGapGS3DN+m/N2yut6yuhi+30vIbghC+bpzgGhNQb1iOKHZ" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="https://hoppla20.github.io/gbemu-rust/pr/pr-14/app/gbemu_rust_app.js" crossorigin="anonymous" integrity="sha384-r86lpyAQDWzIRmuGB08KX8eFz/U2pbuvU0m6vyG6Q+Rd2TuUnQ7h4j6VpwajdDz4"><link rel="preload" href="https://hoppla20.github.io/gbemu-rust/pr/pr-14/app/gbemu_rust_app_bg.wasm" crossorigin="anonymous" integrity="sha384-v+IFedOQWR3Jhu96imGapGS3DN+m/N2yut6yuhi+30vIbghC+bpzgGhNQb1iOKHZ" as="fetch" type="application/wasm"></head>
 
 <body>
     <!-- The WASM code will resize the canvas dynamically -->
