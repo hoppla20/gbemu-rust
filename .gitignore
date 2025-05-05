@@ -1,4 +1,5 @@
 target/
+dist/
 
 traces/
 *.log

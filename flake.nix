@@ -25,7 +25,16 @@
         };
 
         rust-pkg = pkgs.rust-bin.stable.latest.default.override {
-          extensions = ["llvm-tools-preview"];
+          extensions = [
+            "rust-src"
+            "rust-docs"
+            "rust-analyzer"
+            "rust-analysis"
+            "clippy"
+            "rustfmt"
+            "llvm-tools-preview"
+          ];
+          targets = [ "wasm32-unknown-unknown" ];
         };
       in {
         formatter = pkgs.alejandra;

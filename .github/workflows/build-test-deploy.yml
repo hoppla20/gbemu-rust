@@ -11,8 +11,7 @@ on:
       - synchronize
       - closed
     branches:
-      - '*'
-
+      - "*"
 
 jobs:
   build:
@@ -28,16 +27,39 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Build
+      - name: Build native application
         run: >-
           nix develop --command
-          cargo build --profile release
+          cargo build --release
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gbemu_rust
-          path: ./target/release/gbemu_rust
+          name: gbemu-rust-app-native-linux-amd64-linux-gnu
+          path: ./target/release/gbemu_rust_app
+
+      - name: Build web application - main
+        working-directory: ./gbemu_rust_app
+        run: |
+          GITHUB_REPOSITORY_NAME="${GITHUB_REPOSITORY#*/}"
+          PAGES_BASE_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY_NAME}"
+
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            # main branch
+            PAGES_WEB_APP_URL="${PAGES_BASE_URL}/app"
+          elif [ "${GITHUB_HEAD_REF}" != "" ]; then
+            # pull request review
+            GITHUB_PR_NUMBER="$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; /^refs\/pull/ { print $3 }')"
+            PAGES_WEB_APP_URL="${PAGES_BASE_URL}/pr/pr-${GITHUB_PR_NUMBER}/app"
+          fi
+
+          nix develop --command trunk build --release --public-url "${PAGES_WEB_APP_URL}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gbemu-rust-app-web
+          path: ./gbemu_rust_app/dist
 
   build-docs:
     runs-on: ubuntu-latest
@@ -110,12 +132,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
 
-      - run: mv code-coverage-report docs/
+      - run: mv docs site
+      - run: mv code-coverage-report site/
+      - run: mv gbemu-rust-app-web site/app
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: ./docs
+          folder: ./site
           branch: gh-pages
           clean-exclude: pr
           force: false
@@ -144,14 +168,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
 
-      - run: mv code-coverage-report docs/
-        if: ${{ needs.build-docs.result == 'success' && needs.tests.result == 'success' }}
+      - run: mv docs site
+      - run: mv code-coverage-report site/
+      - run: mv gbemu-rust-app-web site/app
 
       - name: Deploy to GitHub Pages Review
         uses: rossjrw/pr-preview-action@v1
         if: ${{ github.event_name == 'pull_request' }}
         with:
-          source-dir: ./docs
+          source-dir: ./site
           preview-branch: gh-pages
           umbrella-dir: pr
           action: auto
