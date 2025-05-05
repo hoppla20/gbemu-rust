@@ -1,0 +1,5 @@
+[build]
+filehash = false
+
+[clean]
+cargo = true

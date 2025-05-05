@@ -7,11 +7,15 @@ edition = "2024"
 name = "bench_step"
 harness = false
 
+[profile.dev.package."*"]
+opt-level = 2
+
 [dependencies]
-criterion.workspace = true
-regex.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true
 tracing-core.workspace = true
 tracing-subscriber.workspace = true
-serde.workspace = true
+
+[dev-dependencies]
+regex = "1.11.1"
+criterion = "0.5.1"

@@ -620,6 +620,7 @@ dependencies = [
  "egui-wgpu",
  "egui-winit",
  "egui_glow",
+ "glow",
  "glutin",
  "glutin-winit",
  "image",
@@ -630,7 +631,6 @@ dependencies = [
  "objc2-foundation 0.2.2",
  "parking_lot",
  "percent-encoding",
- "pollster",
  "profiling",
  "raw-window-handle",
  "static_assertions",
@@ -638,7 +638,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "web-time",
- "wgpu",
  "winapi",
  "windows-sys 0.59.0",
  "winit",
@@ -842,16 +841,19 @@ dependencies = [
 name = "gbemu_rust_app"
 version = "0.1.0"
 dependencies = [
- "criterion",
  "eframe",
  "egui",
  "gbemu_rust_lib",
- "regex",
- "serde",
+ "log",
  "tracing",
  "tracing-appender",
  "tracing-core",
+ "tracing-log",
  "tracing-subscriber",
+ "tracing-wasm",
+ "tracing-web",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -860,7 +862,6 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "regex",
- "serde",
  "tracing",
  "tracing-appender",
  "tracing-core",
@@ -2029,12 +2030,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pollster"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
-
-[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2633,6 +2628,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-wasm"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4575c663a174420fa2d78f4108ff68f65bf2fbb7dd89f33749b6e826b3626e07"
+dependencies = [
+ "tracing",
+ "tracing-subscriber",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "tracing-web"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e6a141feebd51f8d91ebfd785af50fca223c570b86852166caa3b141defe7c"
+dependencies = [
+ "js-sys",
+ "tracing-core",
+ "tracing-subscriber",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "ttf-parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2966,7 +2985,6 @@ dependencies = [
  "document-features",
  "js-sys",
  "log",
- "naga",
  "parking_lot",
  "profiling",
  "raw-window-handle",
@@ -3015,7 +3033,6 @@ dependencies = [
  "arrayvec",
  "ash",
  "bitflags 2.9.0",
- "block",
  "bytemuck",
  "cfg_aliases",
  "core-graphics-types",
