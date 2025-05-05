@@ -159,9 +159,25 @@
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <h2 id="links"><a class="header" href="#links">Links</a></h2>
 <ul>
+<li><a href="./app">Web Application</a></li>
 <li><a href="./code-coverage-report">Code Coverage</a></li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><h1 id="testing"><a class="header" href="#testing">Testing</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><h1 id="code"><a class="header" href="#code">Code</a></h1>
+<h2 id="running-locally"><a class="header" href="#running-locally">Running locally</a></h2>
+<pre><code class="language-bash"># we want to execute the app
+cd gbemu_rust_app
+
+# native
+cargo run
+
+# web
+trunk serve
+# if you are having issues with SRI (integrity check)
+TRUNK_BUILD_NO_SRI=true trunk serve
+# after that you can visit https://localhost:8080/index.html#dev
+# the '#dev' disables caching and will always load the latest build
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="testing"><a class="header" href="#testing">Testing</a></h1>
 <h2 id="getting-started"><a class="header" href="#getting-started">Getting started</a></h2>
 <pre><code class="language-bash"># run all tests
 cargo test

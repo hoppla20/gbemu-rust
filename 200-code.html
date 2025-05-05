@@ -155,7 +155,22 @@
 
                 <div id="content" class="content">
                     <main>
-                        
+                        <h1 id="code"><a class="header" href="#code">Code</a></h1>
+<h2 id="running-locally"><a class="header" href="#running-locally">Running locally</a></h2>
+<pre><code class="language-bash"># we want to execute the app
+cd gbemu_rust_app
+
+# native
+cargo run
+
+# web
+trunk serve
+# if you are having issues with SRI (integrity check)
+TRUNK_BUILD_NO_SRI=true trunk serve
+# after that you can visit https://localhost:8080/index.html#dev
+# the '#dev' disables caching and will always load the latest build
+</code></pre>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
