@@ -1,12 +1,14 @@
 mod alu;
+
 pub mod instructions;
 pub mod interrupts;
 pub mod registers;
 
-use self::instructions::Instruction;
-use self::registers::Registers;
 use crate::emulator::ExecutionError;
 use crate::memory::mmu::Mmu;
+
+use self::instructions::Instruction;
+use self::registers::Registers;
 
 use std::fmt::Debug;
 use tracing::{debug, instrument};

@@ -1,7 +1,3 @@
-use std::process::exit;
-
-use tracing::error;
-
 use crate::memory::{E_RAM_BANK_SIZE, ROM_BANK_SIZE};
 
 use super::Mbc;
@@ -24,7 +20,11 @@ pub struct Mbc1 {
 }
 
 impl Mbc1 {
-    pub fn new(num_rom_banks: usize, num_ram_banks: usize, _has_battery: bool) -> Self {
+    pub fn new(
+        num_rom_banks: usize,
+        num_ram_banks: usize,
+        _has_battery: bool,
+    ) -> Result<Self, String> {
         Self::new_from_buffer(
             vec![0; num_rom_banks * ROM_BANK_SIZE],
             num_ram_banks,
@@ -32,30 +32,30 @@ impl Mbc1 {
         )
     }
 
-    pub fn new_from_buffer(buffer: Vec<u8>, num_ram_banks: usize, _has_battery: bool) -> Self {
+    pub fn new_from_buffer(
+        buffer: Vec<u8>,
+        num_ram_banks: usize,
+        _has_battery: bool,
+    ) -> Result<Self, String> {
         if buffer.len() % ROM_BANK_SIZE != 0 {
-            error!("The ROM buffer is not a multiple of the ROM bank size");
-            exit(1);
+            return Err("The ROM buffer is not a multiple of the ROM bank size".to_owned());
         }
 
         let rom_banks = buffer.len() / ROM_BANK_SIZE;
 
         if !ALLOWED_ROM_BANKS.contains(&rom_banks) {
-            error!(
+            return Err(format!(
                 "Mbc1 does not support ROM buffers with size {} bytes ({} banks)",
                 buffer.len(),
                 rom_banks
-            );
-            error!("Allowed number of banks: {:?}", ALLOWED_ROM_BANKS);
-            exit(1);
+            ));
         }
 
         if !ALLOWED_RAM_BANKS.contains(&num_ram_banks) {
-            error!(
+            return Err(format!(
                 "Mbc1 does not support RAM with size {} bytes",
                 num_ram_banks
-            );
-            exit(1);
+            ));
         }
 
         let extra_large_rom = rom_banks > 32;
@@ -63,7 +63,7 @@ impl Mbc1 {
             panic!("Mbc1 with ROM size >512 KiB only supports RAM with size 8 KiB");
         }
 
-        Mbc1 {
+        Ok(Mbc1 {
             rom: buffer,
             ram: vec![0; num_ram_banks * E_RAM_BANK_SIZE],
 
@@ -74,7 +74,7 @@ impl Mbc1 {
             ram_enabled: false,
             rom_bank_number: 0,
             ram_bank_number: 0,
-        }
+        })
     }
 }
 
@@ -165,7 +165,7 @@ mod test {
     fn test_rom_simple() {
         let _guard = setup_default_logger();
 
-        let mut mbc = Mbc1::new(4, 0, false);
+        let mut mbc = Mbc1::new(4, 0, false).unwrap();
 
         // bank 0
         mbc.rom[0x0100] = 1;
@@ -200,7 +200,7 @@ mod test {
     fn test_ram_simple() {
         let _guard = setup_default_logger();
 
-        let mut mbc = Mbc1::new(2, 4, false);
+        let mut mbc = Mbc1::new(2, 4, false).unwrap();
 
         // bank 0
         mbc.ram[0x0000] = 1;

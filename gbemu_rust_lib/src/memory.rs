@@ -1,7 +1,7 @@
-use super::timer::TimerRegisters;
-
 pub mod mbc;
 pub mod mmu;
+
+use crate::timer::TimerRegisters;
 
 pub(super) const ROM_BANK_SIZE: usize = 0x4000;
 pub(super) const V_RAM_BANK_SIZE: usize = 0x2000;

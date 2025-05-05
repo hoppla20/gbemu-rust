@@ -1,9 +1,10 @@
 use core::panic;
 use std::fmt::Debug;
 
+use crate::memory::mmu::Mmu;
 use crate::utils::bit_operations::extract_bits;
 use crate::utils::half_carry::half_carry_add_r8;
-use crate::{memory::mmu::Mmu, utils::half_carry::half_carry_add_r8_3};
+use crate::utils::half_carry::half_carry_add_r8_3;
 
 use super::{Cpu, ExecutionError, interrupts::Interrupt};
 
