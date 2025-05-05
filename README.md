@@ -4,5 +4,6 @@
 
 ## Links
 
+- [Demo Web App](https://hoppla20.github.io/gbemu-rust/app/)
 - [Documentation (WIP)](https://hoppla20.github.io/gbemu-rust/)
 - [Code Coverage Report](https://hoppla20.github.io/gbemu-rust/code-coverage-report/)
