@@ -168,9 +168,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
 
-      - run: mv docs site
-      - run: mv code-coverage-report site/
-      - run: mv gbemu-rust-app-web site/app
+      - name: Prepare site
+        if: ${{ !contains(needs.*.result, 'skipped') }}
+        run: |
+          mv docs site
+          mv code-coverage-report site/
+          mv gbemu-rust-app-web site/app
 
       - name: Deploy to GitHub Pages Review
         uses: rossjrw/pr-preview-action@v1
