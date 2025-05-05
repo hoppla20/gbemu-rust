@@ -34,8 +34,21 @@ fn main() {
 fn main() {
     use app::GbemuApp;
     use eframe::wasm_bindgen::JsCast as _;
+    use tracing_subscriber::fmt::format::Pretty;
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_web::{MakeWebConsoleWriter, performance_layer};
 
-    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .without_time()
+        .with_writer(MakeWebConsoleWriter::new());
+    let perf_layer = performance_layer().with_details_from_fields(Pretty::default());
+
+    tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(perf_layer)
+        .init();
 
     let web_options = eframe::WebOptions::default();
 
