@@ -1,4 +1,4 @@
-use crate::memory::mmu::Mmu;
+use crate::system::System;
 
 use super::Cpu;
 
@@ -30,7 +30,7 @@ impl From<Interrupt> for u16 {
 }
 
 impl Cpu {
-    pub fn request_interrupt(&mut self, mmu: &mut Mmu, interrupt: Interrupt) {
+    pub fn request_interrupt(&mut self, mmu: &mut System, interrupt: Interrupt) {
         match interrupt {
             Interrupt::VBlank => mmu.io.interrupt_flags |= 1 << VBLANK_INTERRUPT_BIT,
             Interrupt::Lcd => mmu.io.interrupt_flags |= 1 << LCD_INTERRUPT_BIT,
@@ -40,7 +40,7 @@ impl Cpu {
         }
     }
 
-    pub fn interrupt_check(&mut self, mmu: &mut Mmu) -> Option<Interrupt> {
+    pub fn interrupt_check(&mut self, mmu: &mut System) -> Option<Interrupt> {
         if !self.interrupt_enabled {
             return None;
         }

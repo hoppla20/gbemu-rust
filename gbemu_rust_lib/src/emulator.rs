@@ -6,9 +6,9 @@ use crate::cpu::Cpu;
 use crate::cpu::instructions::Instruction;
 use crate::cpu::interrupts::Interrupt;
 use crate::memory::mbc::new_mbc_from_buffer;
-use crate::memory::mmu::Mmu;
 use crate::serial::LogSerial;
 use crate::serial::Serial;
+use crate::system::System;
 
 macro_rules! trace_cpu_state {
     ($self:ident) => {
@@ -33,7 +33,7 @@ pub enum ExecutionError {
 
 pub struct Emulator {
     pub cpu: Cpu,
-    pub mmu: Mmu,
+    pub mmu: System,
 }
 
 impl Emulator {
@@ -51,7 +51,7 @@ impl Emulator {
         } else {
             Box::new(LogSerial::default())
         };
-        let mut mmu = Mmu::new(new_mbc_from_buffer(rom)?, serial);
+        let mut mmu = System::new(new_mbc_from_buffer(rom)?, serial);
 
         let mut result = Self {
             cpu: if let Some(cpu) = cpu_option {

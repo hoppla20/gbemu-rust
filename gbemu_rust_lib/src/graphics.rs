@@ -15,12 +15,12 @@ pub struct GraphicsRegisters {
     pub obj_palette: [u8; 2],
 }
 
-pub struct GraphicsState {
+pub struct Ppu {
     pub v_ram: Vec<u8>,
     pub registers: GraphicsRegisters,
 }
 
-impl Default for GraphicsState {
+impl Default for Ppu {
     fn default() -> Self {
         Self {
             v_ram: vec![0; V_RAM_BANK_SIZE],
@@ -37,5 +37,87 @@ impl Default for GraphicsState {
                 obj_palette: [0x00, 0x00],
             },
         }
+    }
+}
+
+impl Ppu {
+    pub(crate) fn lcd_control(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn lcd_status(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn screen_y(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn screen_x(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn lcd_y(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn lcd_y_compare(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn background_palette(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn obj_palette(&self, arg: i32) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn window_y(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn window_x(&self) -> u8 {
+        todo!()
+    }
+
+    pub(crate) fn write_lcd_control(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_lcd_status(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_screen_y(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_screen_x(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_lcd_y(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_lcd_y_compare(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_background_palette(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_obj_palette(&mut self, arg: i32, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_window_y(&mut self, value: u8) {
+        todo!()
+    }
+
+    pub(crate) fn write_window_x(&mut self, value: u8) {
+        todo!()
     }
 }

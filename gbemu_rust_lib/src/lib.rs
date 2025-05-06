@@ -7,6 +7,7 @@ mod emulator;
 mod graphics;
 mod memory;
 mod serial;
+mod system;
 mod timer;
 mod utils;
 
@@ -17,7 +18,7 @@ pub mod prelude {
     pub use super::memory::mbc::Mbc;
     pub use super::memory::mbc::Mbc0;
     pub use super::memory::mbc::Mbc1;
-    pub use super::memory::mmu::Mmu;
+    pub use super::system::System;
 }
 
 #[cfg(test)]
