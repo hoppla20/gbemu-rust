@@ -98,7 +98,6 @@ impl Cpu {
     pub fn generic_fetch(&mut self, mmu: &mut Mmu) -> Result<(), ExecutionError> {
         if let Some(interrupt) = self.interrupt_check(mmu) {
             debug!(
-                name: "cpu::interrupt",
                 "Executing interrupt service routing for interrupt {:?}",
                 interrupt
             );
@@ -106,8 +105,6 @@ impl Cpu {
             self.current_instruction = Instruction::isr { interrupt };
         } else {
             let opcode = self.read_byte_pc(mmu);
-
-            debug!(name: "cpu::fetch::decode", "Decoding opcode 0x{:02X}", opcode);
 
             self.current_instruction = Instruction::decode_instruction(opcode);
         }
