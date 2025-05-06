@@ -37,6 +37,10 @@ pub struct Emulator {
 }
 
 impl Emulator {
+    pub fn new() -> Result<Self, String> {
+        Self::new_from_buffer(vec![0; 32 * 1024], None, None)
+    }
+
     pub fn new_from_buffer(
         rom: Vec<u8>,
         cpu_option: Option<Cpu>,
@@ -64,7 +68,7 @@ impl Emulator {
     }
 
     #[instrument(level = "debug", skip_all)]
-    pub fn init(&mut self) {
+    fn init(&mut self) {
         trace_cpu_state!(self);
 
         self.cpu.current_instruction =
