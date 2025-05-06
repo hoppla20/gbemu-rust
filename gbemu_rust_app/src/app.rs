@@ -1,6 +1,9 @@
+use gbemu_rust_lib::prelude::Emulator;
+
 pub struct GbemuApp {
     label: String,
     counter: u32,
+    emulator: Emulator,
 }
 
 impl GbemuApp {
@@ -8,12 +11,15 @@ impl GbemuApp {
         Self {
             label: "Hello World!".to_owned(),
             counter: 0,
+            emulator: Emulator::new().unwrap(),
         }
     }
 }
 
 impl eframe::App for GbemuApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        let _ = self.emulator.step();
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // the top panel is often a good place for a menu bar:
 
@@ -33,21 +39,6 @@ impl eframe::App for GbemuApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // the central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.counter, 0..=10).text("value"));
-            if ui.button("Increment").clicked() {
-                self.counter += 1;
-            }
-
-            ui.separator();
-
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
