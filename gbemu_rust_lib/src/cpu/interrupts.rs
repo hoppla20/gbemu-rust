@@ -42,11 +42,11 @@ pub struct InterruptFlags {
 impl From<u8> for InterruptFlags {
     fn from(value: u8) -> Self {
         Self {
-            joypad: bit!(value: u8, JOYPAD_INTERRUPT_BIT),
-            serial: bit!(value: u8, SERIAL_INTERRUPT_BIT),
-            timer: bit!(value: u8, TIMER_INTERRUPT_BIT),
-            lcd: bit!(value: u8, LCD_INTERRUPT_BIT),
-            v_blank: bit!(value: u8, V_BLANK_INTERRUPT_BIT),
+            joypad: bit!(value: u8, 4),
+            serial: bit!(value: u8, 3),
+            timer: bit!(value: u8, 2),
+            lcd: bit!(value: u8, 1),
+            v_blank: bit!(value: u8, 0),
         }
     }
 }

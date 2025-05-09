@@ -35,15 +35,18 @@ pub enum ExecutionError {
 pub struct Emulator {
     pub cpu: Cpu,
     pub system: System,
+
+    graphics_enabled: bool,
 }
 
 impl Emulator {
     pub fn new() -> Result<Self, String> {
-        Self::new_from_buffer(vec![0; 32 * 1024], None, None)
+        Self::new_from_buffer(vec![0; 32 * 1024], true, None, None)
     }
 
     pub fn new_from_buffer(
         rom: Vec<u8>,
+        graphics_enabled: bool,
         cpu_option: Option<Cpu>,
         serial_option: Option<Box<dyn Serial>>,
     ) -> Result<Self, String> {
@@ -61,6 +64,8 @@ impl Emulator {
                 Cpu::new(&mut mmu)
             },
             system: mmu,
+
+            graphics_enabled,
         };
 
         result.init();
@@ -68,7 +73,7 @@ impl Emulator {
         Ok(result)
     }
 
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(skip_all)]
     fn init(&mut self) {
         trace_cpu_state!(self);
 
@@ -77,7 +82,9 @@ impl Emulator {
         (self.cpu.registers.pc, _) = self.cpu.registers.pc.overflowing_add(1);
     }
 
-    #[instrument(level = "debug", skip_all, fields(instruction = format!("{:?}", self.cpu.current_instruction)))]
+    #[instrument(skip_all, fields(
+        instruction = format!("{:?}", self.cpu.current_instruction)
+    ))]
     pub fn step(&mut self) -> Result<(), ExecutionError> {
         let mut cpu_completed = false;
         if !self.cpu.halted {
@@ -89,6 +96,9 @@ impl Emulator {
             self.cpu
                 .request_interrupt(&mut self.system, Interrupt::Timer);
         }
+
+        self.system.graphics.step(self.graphics_enabled);
+        self.system.graphics.step(self.graphics_enabled);
 
         if self.system.io.interrupt_enable
             & <InterruptFlags as Into<u8>>::into(self.system.io.interrupt_flags)

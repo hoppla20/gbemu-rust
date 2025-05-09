@@ -77,7 +77,7 @@ impl TimerRegisters {
         self.counter_written = true;
     }
 
-    #[instrument(level = "trace")]
+    #[instrument(skip_all)]
     pub fn step(&mut self) -> Result<bool, ExecutionError> {
         let mut request_interrupt = false;
         if self.pending_overflow {

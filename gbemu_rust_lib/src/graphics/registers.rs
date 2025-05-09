@@ -112,8 +112,8 @@ impl From<LcdStatusFlags> for u8 {
 }
 
 pub struct GraphicsRegisters {
-    lcd_control: LcdControlFlags,
-    lcd_status: LcdStatusFlags,
+    pub lcd_control: LcdControlFlags,
+    pub lcd_status: LcdStatusFlags,
     lcd_ly: u8,
     lcd_lyc: u8,
     screen_y: u8,
@@ -277,7 +277,6 @@ mod tests {
     #[test]
     fn test_lcd_status_flags() {
         let lcds: LcdStatusFlags = 0x00.into();
-
         let byte: u8 = lcds.into();
         assert!(bit!(byte: u8, 7));
 

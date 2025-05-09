@@ -25,7 +25,7 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, num_steps: usize) -> bool {
     let mut rom = Vec::new();
     reader.read_to_end(&mut rom).unwrap();
 
-    let mut emu = Emulator::new_from_buffer(rom, None, None).unwrap();
+    let mut emu = Emulator::new_from_buffer(rom, false, None, None).unwrap();
     emu.system.graphics.registers.set_lcd_ly(0x90);
 
     let re_failed = Regex::new(r"^Failed").unwrap();

@@ -94,7 +94,7 @@ impl Cpu {
         }
     }
 
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(skip_all)]
     pub fn generic_fetch(&mut self, mmu: &mut System) -> Result<(), ExecutionError> {
         if let Some(interrupt) = self.interrupt_check(mmu) {
             debug!(
