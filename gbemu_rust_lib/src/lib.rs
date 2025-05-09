@@ -1,5 +1,6 @@
 // TODO: Remove at a later point
 #![allow(dead_code)]
+#![allow(clippy::new_without_default)]
 
 mod cartridge;
 mod cpu;

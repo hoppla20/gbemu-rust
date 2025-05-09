@@ -26,7 +26,7 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, num_steps: usize) -> bool {
     reader.read_to_end(&mut rom).unwrap();
 
     let mut emu = Emulator::new_from_buffer(rom, None, None).unwrap();
-    emu.mmu.graphics.registers.lcd_y = 0x90;
+    emu.system.graphics.registers.set_lcd_ly(0x90);
 
     let re_failed = Regex::new(r"^Failed").unwrap();
     let re_passed = Regex::new(r"^Passed").unwrap();
@@ -39,13 +39,13 @@ fn test_blargg_cpu_instrs(rom_file_path: &str, num_steps: usize) -> bool {
             break;
         }
 
-        if re_failed.is_match(emu.mmu.io.serial.get_last_buffer()) {
+        if re_failed.is_match(emu.system.io.serial.get_last_buffer()) {
             warn!("Tests failed!");
             test_passed = false;
             break;
         }
 
-        if !test_passed && re_passed.is_match(emu.mmu.io.serial.get_last_buffer()) {
+        if !test_passed && re_passed.is_match(emu.system.io.serial.get_last_buffer()) {
             info!("Tests passed after {} steps!", steps);
             test_passed = true;
         }

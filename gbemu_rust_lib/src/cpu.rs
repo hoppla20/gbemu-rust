@@ -50,9 +50,9 @@ impl Cpu {
         Cpu::new_from_registers(Registers {
             a: 0x01,
             f: if mmu.read_byte(0x14D) == 0x00 {
-                0b10000000
+                0b1000_0000
             } else {
-                0b10110000
+                0b1011_0000
             },
             b: 0x00,
             c: 0x13,

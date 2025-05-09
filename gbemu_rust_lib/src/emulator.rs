@@ -16,10 +16,10 @@ macro_rules! trace_cpu_state {
             name: "cpu::state",
             "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
             $self.cpu,
-            $self.mmu.read_byte($self.cpu.registers.pc),
-            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(1)),
-            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(2)),
-            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(3)),
+            $self.system.read_byte($self.cpu.registers.pc),
+            $self.system.read_byte($self.cpu.registers.pc.wrapping_add(1)),
+            $self.system.read_byte($self.cpu.registers.pc.wrapping_add(2)),
+            $self.system.read_byte($self.cpu.registers.pc.wrapping_add(3)),
         )
     };
 }
@@ -33,7 +33,7 @@ pub enum ExecutionError {
 
 pub struct Emulator {
     pub cpu: Cpu,
-    pub mmu: System,
+    pub system: System,
 }
 
 impl Emulator {
@@ -59,7 +59,7 @@ impl Emulator {
             } else {
                 Cpu::new(&mut mmu)
             },
-            mmu,
+            system: mmu,
         };
 
         result.init();
@@ -72,7 +72,7 @@ impl Emulator {
         trace_cpu_state!(self);
 
         self.cpu.current_instruction =
-            Instruction::decode_instruction(self.mmu.read_byte(self.cpu.registers.pc));
+            Instruction::decode_instruction(self.system.read_byte(self.cpu.registers.pc));
         (self.cpu.registers.pc, _) = self.cpu.registers.pc.overflowing_add(1);
     }
 
@@ -80,15 +80,16 @@ impl Emulator {
     pub fn step(&mut self) -> Result<(), ExecutionError> {
         let mut cpu_completed = false;
         if !self.cpu.halted {
-            cpu_completed = self.cpu.step(&mut self.mmu)?
+            cpu_completed = self.cpu.step(&mut self.system)?
         }
 
-        let timer_interrupt = self.mmu.io.timer.step()?;
+        let timer_interrupt = self.system.io.timer.step()?;
         if timer_interrupt {
-            self.cpu.request_interrupt(&mut self.mmu, Interrupt::Timer);
+            self.cpu
+                .request_interrupt(&mut self.system, Interrupt::Timer);
         }
 
-        if self.mmu.io.interrupt_enable & self.mmu.io.interrupt_flags != 0 {
+        if self.system.io.interrupt_enable & self.system.io.interrupt_flags != 0 {
             self.cpu.halted = false;
         }
 
@@ -100,7 +101,7 @@ impl Emulator {
                 },
             }
 
-            self.cpu.generic_fetch(&mut self.mmu)?;
+            self.cpu.generic_fetch(&mut self.system)?;
         }
 
         Ok(())

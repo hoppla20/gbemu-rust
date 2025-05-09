@@ -7,6 +7,8 @@ edition = "2024"
 default = []
 
 [dependencies]
+gbemu_rust_lib = { path = "../gbemu_rust_lib" }
+
 egui = "0.31.1"
 eframe = { version = "0.31.1", default-features = false, features = [
   "default_fonts",
@@ -14,12 +16,10 @@ eframe = { version = "0.31.1", default-features = false, features = [
   "wayland",
   "x11",
 ] }
-log = "0.4.27"
-tracing-log = "0.2.0"
 
-gbemu_rust_lib = { path = "../gbemu_rust_lib" }
+log = "0.4.27"
 tracing.workspace = true
-tracing-appender.workspace = true
+tracing-log.workspace = true
 tracing-core.workspace = true
 tracing-subscriber.workspace = true
 

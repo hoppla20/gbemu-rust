@@ -16,7 +16,6 @@ pub struct IoRegisters {
     pub interrupt_enable: u8,
     pub timer: TimerRegisters,
     pub serial: Box<dyn Serial>,
-    pub serial_transfer_control: u8,
 }
 
 impl IoRegisters {
@@ -26,7 +25,6 @@ impl IoRegisters {
             interrupt_flags: 0,
             interrupt_enable: 0,
             timer: TimerRegisters::default(),
-            serial_transfer_control: 0,
         }
     }
 }
@@ -56,11 +54,11 @@ impl System {
         }
     }
 
-    pub fn io_register(&self, address: u16) -> u8 {
+    pub fn get_io_register(&self, address: u16) -> u8 {
         match address {
             // serial
             0xFF01 => self.io.serial.read(),
-            0xFF02 => self.io.serial_transfer_control,
+            0xFF02 => self.io.serial.get_transfer_control(),
 
             //timer
             0xFF04 => self.io.timer.divider(),
@@ -81,17 +79,17 @@ impl System {
             },
 
             // graphics
-            0xFF40 => self.graphics.lcd_control(),
-            0xFF41 => self.graphics.lcd_status(),
-            0xFF42 => self.graphics.screen_y(),
-            0xFF43 => self.graphics.screen_x(),
-            0xFF44 => self.graphics.lcd_y(),
-            0xFF45 => self.graphics.lcd_y_compare(),
-            0xFF47 => self.graphics.background_palette(),
-            0xFF48 => self.graphics.obj_palette(0),
-            0xFF49 => self.graphics.obj_palette(1),
-            0xFF4A => self.graphics.window_y(),
-            0xFF4B => self.graphics.window_x(),
+            0xFF40 => self.graphics.registers.get_lcd_control(),
+            0xFF41 => self.graphics.registers.get_lcd_status(),
+            0xFF42 => self.graphics.registers.get_screen_y(),
+            0xFF43 => self.graphics.registers.get_screen_x(),
+            0xFF44 => self.graphics.registers.get_lcd_ly(),
+            0xFF45 => self.graphics.registers.get_lcd_lyc(),
+            0xFF47 => self.graphics.registers.get_background_palette(),
+            0xFF48 => self.graphics.registers.get_obj_palette(0),
+            0xFF49 => self.graphics.registers.get_obj_palette(1),
+            0xFF4A => self.graphics.registers.get_window_y(),
+            0xFF4B => self.graphics.registers.get_window_x(),
             _ => {
                 debug!("Reading from unimplemented i/o register 0x{:02X}", address);
                 0xFF
@@ -99,32 +97,11 @@ impl System {
         }
     }
 
-    pub fn read_byte(&self, address: u16) -> u8 {
-        match address {
-            0x0000..V_RAM_ADDR => self.mbc.read_rom(address),
-            V_RAM_ADDR..E_RAM_BANK_ADDR => self.graphics.v_ram[(address - V_RAM_ADDR) as usize],
-            E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => self.mbc.read_ram(address - E_RAM_BANK_ADDR),
-            W_RAM_BANK_0_ADDR..ECHO_RAM_ADDR => self.w_ram[(address - W_RAM_BANK_0_ADDR) as usize],
-            ECHO_RAM_ADDR..OAM_ADDR => self.read_byte(address - ECHO_RAM_ADDR + W_RAM_BANK_0_ADDR),
-            OAM_ADDR..UNUSABLE_ADDR => unimplemented!("OAM not implemented!"),
-            UNUSABLE_ADDR..IO_REGISTERS_ADDR => {
-                if self.oam_transfer {
-                    0xFF
-                } else {
-                    0x00
-                }
-            },
-            IO_REGISTERS_ADDR..H_RAM_ADDR => self.io_register(address),
-            H_RAM_ADDR..IE_REGISTER_ADDR => self.h_ram[(address - H_RAM_ADDR) as usize],
-            IE_REGISTER_ADDR => self.io.interrupt_enable,
-        }
-    }
-
     pub fn write_io_register(&mut self, address: u16, value: u8) {
         match address {
             // serial
-            0xFF01 => self.io.serial.write(value as char),
-            0xFF02 => self.io.serial_transfer_control = value,
+            0xFF01 => self.io.serial.write(value),
+            0xFF02 => self.io.serial.set_transfer_control(value),
 
             //timer
             0xFF04 => self.io.timer.reset_divider(),
@@ -144,20 +121,41 @@ impl System {
             },
 
             // graphics
-            0xFF40 => self.graphics.write_lcd_control(value),
-            0xFF41 => self.graphics.write_lcd_status(value),
-            0xFF42 => self.graphics.write_screen_y(value),
-            0xFF43 => self.graphics.write_screen_x(value),
-            0xFF44 => self.graphics.write_lcd_y(value),
-            0xFF45 => self.graphics.write_lcd_y_compare(value),
-            0xFF47 => self.graphics.write_background_palette(value),
-            0xFF48 => self.graphics.write_obj_palette(0, value),
-            0xFF49 => self.graphics.write_obj_palette(1, value),
-            0xFF4A => self.graphics.write_window_y(value),
-            0xFF4B => self.graphics.write_window_x(value),
+            0xFF40 => self.graphics.registers.set_lcd_control(value),
+            0xFF41 => self.graphics.registers.set_lcd_status(value),
+            0xFF42 => self.graphics.registers.set_screen_y(value),
+            0xFF43 => self.graphics.registers.set_screen_x(value),
+            0xFF44 => self.graphics.registers.set_lcd_ly(value),
+            0xFF45 => self.graphics.registers.set_lcd_lyc(value),
+            0xFF47 => self.graphics.registers.set_background_palette(value),
+            0xFF48 => self.graphics.registers.set_obj_palette(0, value),
+            0xFF49 => self.graphics.registers.set_obj_palette(1, value),
+            0xFF4A => self.graphics.registers.set_window_y(value),
+            0xFF4B => self.graphics.registers.set_window_x(value),
             _ => {
                 debug!("Writing to unimplemented i/o register 0x{:02X}", address);
             },
+        }
+    }
+
+    pub fn read_byte(&self, address: u16) -> u8 {
+        match address {
+            0x0000..V_RAM_ADDR => self.mbc.read_rom(address),
+            V_RAM_ADDR..E_RAM_BANK_ADDR => self.graphics.v_ram[(address - V_RAM_ADDR) as usize],
+            E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => self.mbc.read_ram(address - E_RAM_BANK_ADDR),
+            W_RAM_BANK_0_ADDR..ECHO_RAM_ADDR => self.w_ram[(address - W_RAM_BANK_0_ADDR) as usize],
+            ECHO_RAM_ADDR..OAM_ADDR => self.read_byte(address - ECHO_RAM_ADDR + W_RAM_BANK_0_ADDR),
+            OAM_ADDR..UNUSABLE_ADDR => unimplemented!("OAM not implemented!"),
+            UNUSABLE_ADDR..IO_REGISTERS_ADDR => {
+                if self.oam_transfer {
+                    0xFF
+                } else {
+                    0x00
+                }
+            },
+            IO_REGISTERS_ADDR..H_RAM_ADDR => self.get_io_register(address),
+            H_RAM_ADDR..IE_REGISTER_ADDR => self.h_ram[(address - H_RAM_ADDR) as usize],
+            IE_REGISTER_ADDR => self.io.interrupt_enable,
         }
     }
 

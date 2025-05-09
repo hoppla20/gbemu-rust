@@ -10,12 +10,14 @@ harness = false
 [profile.dev.package."*"]
 opt-level = 2
 
+[profile.release]
+opt-level = 2
+
 [dependencies]
 tracing.workspace = true
-tracing-appender.workspace = true
-tracing-core.workspace = true
-tracing-subscriber.workspace = true
 
 [dev-dependencies]
-regex = "1.11.1"
-criterion = "0.5.1"
+regex.workspace = true
+criterion.workspace = true
+tracing-core.workspace = true
+tracing-subscriber.workspace = true

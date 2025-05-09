@@ -92,39 +92,39 @@ fn test_arithmetics_simple() {
     assert_eq!(emu.cpu.registers.get_hl(), 0x0000);
 
     emu.cpu.registers.set_hl(0xFF80);
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x00);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x00);
 
     emu.step().unwrap(); // INC (HL
     emu.step().unwrap(); // INC (HL
     emu.step().unwrap(); // INC (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x01);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x01);
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // SWAP (HL
     emu.step().unwrap(); // SWAP (HL
     emu.step().unwrap(); // SWAP (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x10);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x10);
 
     emu.step().unwrap(); // DEC (HL
     emu.step().unwrap(); // DEC (HL
     emu.step().unwrap(); // DEC (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x0F);
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // BIT 4, (HL
     emu.step().unwrap(); // BIT 4, (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x0F);
     emu.cpu.registers.get_flag_zero();
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // SET 4, (HL
     emu.step().unwrap(); // SET 4, (HL
     emu.step().unwrap(); // SET 4, (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x1F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x1F);
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // RES 4, (HL
     emu.step().unwrap(); // RES 4, (HL
     emu.step().unwrap(); // RES 4, (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x0F);
 }
