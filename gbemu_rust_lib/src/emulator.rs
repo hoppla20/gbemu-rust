@@ -5,6 +5,7 @@ use tracing::trace;
 use crate::cpu::Cpu;
 use crate::cpu::instructions::Instruction;
 use crate::cpu::interrupts::Interrupt;
+use crate::cpu::interrupts::InterruptFlags;
 use crate::memory::mbc::new_mbc_from_buffer;
 use crate::serial::LogSerial;
 use crate::serial::Serial;
@@ -89,7 +90,10 @@ impl Emulator {
                 .request_interrupt(&mut self.system, Interrupt::Timer);
         }
 
-        if self.system.io.interrupt_enable & self.system.io.interrupt_flags != 0 {
+        if self.system.io.interrupt_enable
+            & <InterruptFlags as Into<u8>>::into(self.system.io.interrupt_flags)
+            != 0
+        {
             self.cpu.halted = false;
         }
 

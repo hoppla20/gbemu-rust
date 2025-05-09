@@ -1,5 +1,6 @@
 use tracing::debug;
 
+use crate::cpu::interrupts::InterruptFlags;
 use crate::graphics::Ppu;
 use crate::memory::mbc::Mbc;
 use crate::memory::{
@@ -12,7 +13,7 @@ use crate::timer::TimerRegisters;
 static CYCLES_PER_CLOCK_LOOKUP: [u16; 4] = [256, 4, 16, 64];
 
 pub struct IoRegisters {
-    pub interrupt_flags: u8,
+    pub interrupt_flags: InterruptFlags,
     pub interrupt_enable: u8,
     pub timer: TimerRegisters,
     pub serial: Box<dyn Serial>,
@@ -22,7 +23,7 @@ impl IoRegisters {
     pub fn new(serial: Box<dyn Serial>) -> Self {
         IoRegisters {
             serial,
-            interrupt_flags: 0,
+            interrupt_flags: 0.into(),
             interrupt_enable: 0,
             timer: TimerRegisters::default(),
         }
@@ -67,7 +68,7 @@ impl System {
             0xFF07 => self.io.timer.control,
 
             // interrupt
-            0xFF0F => self.io.interrupt_flags,
+            0xFF0F => self.io.interrupt_flags.into(),
 
             // TODO: audio
             0xFF10..=0xFF26 => {
@@ -110,7 +111,7 @@ impl System {
             0xFF07 => self.io.timer.control = value,
 
             // interrupt
-            0xFF0F => self.io.interrupt_flags = value,
+            0xFF0F => self.io.interrupt_flags = value.into(),
 
             // TODO: audio
             0xFF10..=0xFF26 => {

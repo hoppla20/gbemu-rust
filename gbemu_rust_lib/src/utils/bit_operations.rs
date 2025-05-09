@@ -1,5 +1,5 @@
 macro_rules! bit {
-    ($value:ident : $t:ty, $i:literal) => {{
+    ($value:ident : $t:ty, $i:expr) => {{
         const _: () = assert!(
             $i < std::mem::size_of::<$t>() * 8,
             "i must be less than the size of the variables type!"
@@ -11,7 +11,7 @@ macro_rules! bit {
 }
 
 macro_rules! extract_bits {
-    ($value:ident : $t:ty, $i:literal, $j:literal) => {{
+    ($value:ident : $t:ty, $i:expr, $j:expr) => {{
         // compile-time checks
         const _: () = assert!($i <= $j, "i must be less then or equal to j!");
         const _: () = assert!(
