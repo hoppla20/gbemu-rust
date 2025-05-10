@@ -1,6 +1,5 @@
-use core::panic;
 use std::fmt::Debug;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 use crate::emulator::ExecutionError;
 
@@ -78,11 +77,11 @@ impl TimerRegisters {
         self.counter_written = true;
     }
 
+    #[instrument(skip_all)]
     pub fn step(&mut self) -> Result<bool, ExecutionError> {
         let mut request_interrupt = false;
         if self.pending_overflow {
             debug!(
-                name: "timer::interrupt",
                 "Requesting timer interrupt and resetting timer counter to timer modulo {}",
                 self.modulo
             );
@@ -121,13 +120,7 @@ impl TimerRegisters {
                 self.counter = temp;
 
                 if overflow {
-                    debug!(
-                        name: "timer::overflow",
-                        "Timer counter overflowed. Delayed interrupt request and counter reset after the next cycle"
-                    );
                     self.pending_overflow = true;
-                } else {
-                    debug!(name: "timer::increment", "Incremented timer counter to {}", self.counter);
                 }
             }
         }

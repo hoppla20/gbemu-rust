@@ -1,7 +1,6 @@
-use core::panic;
 use std::fmt::Debug;
 
-use crate::memory::mmu::Mmu;
+use crate::system::System;
 use crate::utils::bit_operations::extract_bits;
 use crate::utils::half_carry::half_carry_add_r8;
 use crate::utils::half_carry::half_carry_add_r8_3;
@@ -610,7 +609,7 @@ impl Cpu {
         self.registers.w = ((self.registers.pc >> 8) as i16 + adj) as u8;
     }
 
-    pub(super) fn instruction_step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
+    pub(super) fn instruction_step(&mut self, mmu: &mut System) -> Result<bool, ExecutionError> {
         match self.current_instruction {
             //special
             Instruction::nop => Ok(true),

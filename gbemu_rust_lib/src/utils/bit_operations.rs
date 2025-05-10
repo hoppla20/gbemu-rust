@@ -1,3 +1,15 @@
+macro_rules! bit {
+    ($value:ident : $t:ty, $i:literal) => {{
+        const _: () = assert!(
+            $i < std::mem::size_of::<$t>() * 8,
+            "i must be less than the size of the variables type!"
+        );
+        const _: () = assert!($i >= 0, "i must be greater than or equal to 0!");
+
+        (($value >> $i) & 1) > 0
+    }};
+}
+
 macro_rules! extract_bits {
     ($value:ident : $t:ty, $i:literal, $j:literal) => {{
         // compile-time checks
@@ -14,13 +26,14 @@ macro_rules! extract_bits {
     }};
 }
 
+pub(crate) use bit;
 pub(crate) use extract_bits;
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn test_extract_single_bit() {
-        let value: u8 = 0b00001111;
+        let value: u8 = 0b0000_1111;
         assert_eq!(extract_bits!(value: u8, 0, 0), 1);
         assert_eq!(extract_bits!(value: u8, 3, 3), 1);
         assert_eq!(extract_bits!(value: u8, 4, 4), 0);
@@ -29,7 +42,7 @@ mod tests {
 
     #[test]
     fn test_extract_multiple_bits() {
-        let value: u8 = 0b00001111;
+        let value: u8 = 0b0000_1111;
         assert_eq!(extract_bits!(value: u8, 0, 3), 0b1111);
         assert_eq!(extract_bits!(value: u8, 4, 7), 0b0000);
         assert_eq!(extract_bits!(value: u8, 1, 4), 0b0111);

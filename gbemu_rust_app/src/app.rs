@@ -1,16 +1,14 @@
+#![allow(unused_variables)]
+
 use gbemu_rust_lib::prelude::Emulator;
 
 pub struct GbemuApp {
-    label: String,
-    counter: u32,
     emulator: Emulator,
 }
 
 impl GbemuApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         Self {
-            label: "Hello World!".to_owned(),
-            counter: 0,
             emulator: Emulator::new().unwrap(),
         }
     }
