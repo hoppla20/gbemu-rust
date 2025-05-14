@@ -163,14 +163,17 @@ cargo test
 # run unit tests for the module cpu::alu
 cargo test --lib cpu::alu
 
-# run all (non-ingored) blargg cpu_instrs tests
-cargo test --tests cpu::tests::blargg
+# run all (non-ingored) blargg individual cpu_instrs tests
+cargo test --features nogfx --test blargg_cpu_instrs_individual
 
 # run blargg cpu_instrs test 01 without logs
-cargo test --tests cpu::tests::blargg::test_blargg_cpu_instrs_01
+cargo test --features nogfx --test blargg_cpu_instrs_individual --tests 01
 
 # run blargg cpu_instrs test 02 with info log
-RUST_DEBUG=info cargo test --tests test_blargg_cpu_instrs_02
+RUST_LOG=info cargo test --features nogfx --test blargg_cpu_instrs_individual --tests 02
+
+# run blargg cpu_instrs test 03 with release profile
+cargo test --profile release --features nogfx --test blargg_cpu_instrs_individual --tests 02
 </code></pre>
 <p>Note:</p>
 <ul>
@@ -179,17 +182,13 @@ RUST_DEBUG=info cargo test --tests test_blargg_cpu_instrs_02
 for <code>cargo test</code></li>
 </ul>
 <h2 id="blargg-cpu_instrs-tests"><a class="header" href="#blargg-cpu_instrs-tests">Blargg cpu_instrs tests</a></h2>
-<p>The <code>cpu::tests::blargg::test_cpu_instrs_XY</code> are configured to log <code>cpu::state</code> events with <code>trace</code>
-level to <code>traces/cpu_instrs_XY.log</code> in the root directory of this project. After running a certain
-amount of cycles (determined per test) the tests calls
-<a href="https://github.com/robert/gameboy-doctor">gameboy-doctor</a>.</p>
-<p>In addition to the individual tests, the test <code>cpu::tests::blargg::test_cpu_instrs_full</code> runs
-the whole suite, however without gameboy-doctor and without logging to a file. The full test is marked
-as ignored because all individual tests are already in their own test function. You can however run
-the full test manually:</p>
-<pre><code class="language-bash"># run full blarg cpu_instrs test with info logs
-RUST_DEBUG=info cargo test --tests cpu::tests::blargg::test_cpu_instrs_full -- --include-ignored
-</code></pre>
+<p>The <code>blargg_cpu_instrs_individual</code> integration tests are configured to log <code>cpu::state</code> events with
+<code>trace</code> level to <code>traces/cpu_instrs_XY.log</code> in the root directory of this project. After running a
+certain amount of cycles (determined per test) the tests calls
+<a href="https://github.com/robert/gameboy-doctor">gameboy-doctor</a>. This test suite is configured to requirement the <code>nogfx</code> feature due to gameboy-doctor's requirement that the graphics register LY
+has to return <code>0x90</code>.</p>
+<p>In addition to the individual tests, the integration test <code>blargg_cpu_instrs_full</code> runs
+the whole suite, however without gameboy-doctor and without logging to a file.</p>
 <h2 id="benchmarks"><a class="header" href="#benchmarks">Benchmarks</a></h2>
 <p>There is also a benchmark which collects runtime statistics about the <code>emulator::step</code> function:</p>
 <pre><code class="language-bash"># run the bench_step benchmark
