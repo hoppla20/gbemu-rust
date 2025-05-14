@@ -10,7 +10,8 @@ mod memory;
 mod serial;
 mod system;
 mod timer;
-mod utils;
+
+pub mod utils;
 
 pub mod prelude {
     pub use super::cpu::Cpu;

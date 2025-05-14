@@ -221,6 +221,10 @@ impl GraphicsRegisters {
     pub fn set_obj_palette(&mut self, index: usize, value: u8) {
         self.obj_palette[index] = value;
     }
+
+    pub fn inc_lcd_ly(&mut self) {
+        self.lcd_ly = self.lcd_ly.wrapping_add(1)
+    }
 }
 
 #[cfg(test)]

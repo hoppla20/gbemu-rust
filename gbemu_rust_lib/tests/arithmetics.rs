@@ -1,8 +1,12 @@
-use crate::cpu::Cpu;
-use crate::emulator::Emulator;
+mod helpers;
+
+use gbemu_rust_lib::prelude::*;
+use helpers::setup_default_logger;
 
 #[test]
 fn test_arithmetics_simple() {
+    let _guard = setup_default_logger();
+
     let instructions = [
         0x80, // ADD A, B
         0x90, // SUB A, B

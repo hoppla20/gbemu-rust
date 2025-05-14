@@ -134,6 +134,3 @@ impl Debug for Cpu {
         )
     }
 }
-
-#[cfg(test)]
-mod tests;
