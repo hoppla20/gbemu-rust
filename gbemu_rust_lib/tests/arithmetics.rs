@@ -1,8 +1,12 @@
-use crate::cpu::Cpu;
-use crate::emulator::Emulator;
+mod helpers;
+
+use gbemu_rust_lib::prelude::*;
+use helpers::setup_default_logger;
 
 #[test]
 fn test_arithmetics_simple() {
+    let _guard = setup_default_logger();
+
     let instructions = [
         0x80, // ADD A, B
         0x90, // SUB A, B
@@ -34,7 +38,7 @@ fn test_arithmetics_simple() {
     rom_buffer[0..instructions.len()].copy_from_slice(&instructions);
 
     let cpu_zeroed = Cpu::new_zeroed();
-    let mut emu = Emulator::new_from_buffer(rom_buffer, Some(cpu_zeroed), None).unwrap();
+    let mut emu = Emulator::new_from_buffer(rom_buffer, false, Some(cpu_zeroed), None).unwrap();
 
     emu.cpu.registers.a = 0b10;
     emu.cpu.registers.b = 0b01;
@@ -92,39 +96,39 @@ fn test_arithmetics_simple() {
     assert_eq!(emu.cpu.registers.get_hl(), 0x0000);
 
     emu.cpu.registers.set_hl(0xFF80);
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x00);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x00);
 
     emu.step().unwrap(); // INC (HL
     emu.step().unwrap(); // INC (HL
     emu.step().unwrap(); // INC (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x01);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x01);
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // SWAP (HL
     emu.step().unwrap(); // SWAP (HL
     emu.step().unwrap(); // SWAP (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x10);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x10);
 
     emu.step().unwrap(); // DEC (HL
     emu.step().unwrap(); // DEC (HL
     emu.step().unwrap(); // DEC (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x0F);
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // BIT 4, (HL
     emu.step().unwrap(); // BIT 4, (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x0F);
     emu.cpu.registers.get_flag_zero();
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // SET 4, (HL
     emu.step().unwrap(); // SET 4, (HL
     emu.step().unwrap(); // SET 4, (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x1F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x1F);
 
     emu.step().unwrap(); // PREFIX (HL
     emu.step().unwrap(); // RES 4, (HL
     emu.step().unwrap(); // RES 4, (HL
     emu.step().unwrap(); // RES 4, (HL
-    assert_eq!(emu.mmu.read_byte(emu.cpu.registers.get_hl()), 0x0F);
+    assert_eq!(emu.system.read_byte(emu.cpu.registers.get_hl()), 0x0F);
 }
