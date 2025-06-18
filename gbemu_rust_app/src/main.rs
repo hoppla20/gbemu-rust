@@ -25,7 +25,7 @@ fn main() {
     eframe::run_native(
         "eframe template",
         native_options,
-        Box::new(|cc| Ok(Box::new(GbemuApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc).unwrap()))),
     )
     .unwrap();
 }
@@ -68,7 +68,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(GbemuApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc).unwrap()))),
             )
             .await;
 
