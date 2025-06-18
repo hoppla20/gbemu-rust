@@ -5,7 +5,7 @@ use crate::graphics::Ppu;
 use crate::memory::mbc::Mbc;
 use crate::memory::{
     E_RAM_BANK_ADDR, ECHO_RAM_ADDR, H_RAM_ADDR, H_RAM_SIZE, IE_REGISTER_ADDR, IO_REGISTERS_ADDR,
-    OAM_ADDR, UNUSABLE_ADDR, V_RAM_ADDR, W_RAM_BANK_0_ADDR, W_RAM_BANK_SIZE,
+    OAM_ADDR, TILE_MAPS_ADDR, UNUSABLE_ADDR, V_RAM_ADDR, W_RAM_BANK_0_ADDR, W_RAM_BANK_SIZE,
 };
 use crate::serial::Serial;
 use crate::timer::TimerRegisters;
@@ -142,7 +142,15 @@ impl System {
     pub fn read_byte(&self, address: u16) -> u8 {
         match address {
             0x0000..V_RAM_ADDR => self.mbc.read_rom(address),
-            V_RAM_ADDR..E_RAM_BANK_ADDR => self.graphics.v_ram[(address - V_RAM_ADDR) as usize],
+            V_RAM_ADDR..TILE_MAPS_ADDR => self.graphics.tile_data.get_byte(address - V_RAM_ADDR),
+            TILE_MAPS_ADDR..E_RAM_BANK_ADDR => {
+                let rel_addr = address - TILE_MAPS_ADDR;
+                if rel_addr < 32 * 32 {
+                    self.graphics.tile_maps[0].get_byte(rel_addr)
+                } else {
+                    self.graphics.tile_maps[1].get_byte(rel_addr)
+                }
+            },
             E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => self.mbc.read_ram(address - E_RAM_BANK_ADDR),
             W_RAM_BANK_0_ADDR..ECHO_RAM_ADDR => self.w_ram[(address - W_RAM_BANK_0_ADDR) as usize],
             ECHO_RAM_ADDR..OAM_ADDR => self.read_byte(address - ECHO_RAM_ADDR + W_RAM_BANK_0_ADDR),
@@ -163,8 +171,17 @@ impl System {
     pub fn write_byte(&mut self, address: u16, value: u8) {
         match address {
             0x0000..V_RAM_ADDR => self.mbc.write_rom(address, value),
-            V_RAM_ADDR..E_RAM_BANK_ADDR => {
-                self.graphics.v_ram[(address - V_RAM_ADDR) as usize] = value
+            V_RAM_ADDR..TILE_MAPS_ADDR => self
+                .graphics
+                .tile_data
+                .set_byte(address - V_RAM_ADDR, value),
+            TILE_MAPS_ADDR..E_RAM_BANK_ADDR => {
+                let rel_addr = address - TILE_MAPS_ADDR;
+                if rel_addr < 32 * 32 {
+                    self.graphics.tile_maps[0].set_byte(rel_addr, value)
+                } else {
+                    self.graphics.tile_maps[1].set_byte(rel_addr, value)
+                }
             },
             E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => {
                 self.mbc.write_ram(address - E_RAM_BANK_ADDR, value)

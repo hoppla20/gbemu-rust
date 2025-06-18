@@ -13,6 +13,7 @@ pub(super) const H_RAM_SIZE: usize = 0x007F;
 pub(super) const ROM_BANK_0_ADDR: u16 = 0x0000;
 pub(super) const ROM_BANK_X_ADDR: u16 = ROM_BANK_0_ADDR + (ROM_BANK_SIZE as u16);
 pub(super) const V_RAM_ADDR: u16 = ROM_BANK_X_ADDR + (ROM_BANK_SIZE as u16);
+pub(super) const TILE_MAPS_ADDR: u16 = V_RAM_ADDR + 0x1800;
 pub(super) const E_RAM_BANK_ADDR: u16 = V_RAM_ADDR + (V_RAM_BANK_SIZE as u16);
 pub(super) const W_RAM_BANK_0_ADDR: u16 = E_RAM_BANK_ADDR + (E_RAM_BANK_SIZE as u16);
 pub(super) const W_RAM_BANK_X_ADDR: u16 = W_RAM_BANK_0_ADDR + (W_RAM_BANK_SIZE as u16);

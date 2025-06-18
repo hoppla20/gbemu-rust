@@ -1,9 +1,11 @@
 use std::array::from_fn;
 
-use super::registers::LcdControlFlags;
+pub(super) const TILE_SIZE: usize = 16;
+pub(super) const NUM_TILES: usize = 0x1800 / TILE_SIZE;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Pixel {
+    #[default]
     Color0,
     Color1,
     Color2,
@@ -41,13 +43,39 @@ pub struct Tile {
     pub rows: [TileRow; 8],
 }
 
+impl Tile {
+    pub fn get_byte(&self, address: u16) -> u8 {
+        assert!((address as usize) < TILE_SIZE);
+
+        self.rows[address as usize / 2].bytes[address as usize % 2]
+    }
+
+    pub fn set_byte(&mut self, address: u16, value: u8) {
+        println!("{}", address);
+
+        assert!((address as usize) < TILE_SIZE);
+
+        self.rows[address as usize / 2].bytes[address as usize % 2] = value;
+    }
+}
+
 #[derive(Default)]
 pub struct TileMap {
-    tiles: [[u8; 32]; 32],
+    pub tiles: [[u8; 32]; 32],
+}
+
+impl TileMap {
+    pub fn get_byte(&self, address: u16) -> u8 {
+        self.tiles[address as usize / 32][address as usize % 32]
+    }
+
+    pub fn set_byte(&mut self, address: u16, value: u8) {
+        self.tiles[address as usize / 32][address as usize % 32] = value;
+    }
 }
 
 pub struct TileData {
-    tiles: [Tile; 3 * 128],
+    tiles: [Tile; NUM_TILES],
 }
 
 impl Default for TileData {
@@ -59,8 +87,8 @@ impl Default for TileData {
 }
 
 impl TileData {
-    pub fn get_tile(&self, lcdc: LcdControlFlags, tile_number: u8) -> &Tile {
-        if lcdc.tile_data_select {
+    pub fn get_tile(&self, tile_data_select: bool, tile_number: u8) -> &Tile {
+        if tile_data_select {
             // 8000 method
             &self.tiles[tile_number as usize]
         } else {
@@ -68,10 +96,20 @@ impl TileData {
             &self.tiles[(256 + ((tile_number as i8) as i16)) as usize]
         }
     }
+
+    pub fn get_byte(&self, address: u16) -> u8 {
+        self.tiles[address as usize / 16].get_byte(address % 16)
+    }
+
+    pub fn set_byte(&mut self, address: u16, value: u8) {
+        self.tiles[address as usize / 16].set_byte(address % 16, value);
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::graphics::registers::LcdControlFlags;
+
     use super::*;
 
     #[test]
@@ -96,34 +134,34 @@ mod tests {
         let tiles = TileData::default();
 
         // 8000 method
-        let lcdc = (!0).into();
+        let lcdc: LcdControlFlags = (!0).into();
         // check for poiner (in-)equality
         assert_ne!(
             &tiles.tiles[0] as *const _,
-            tiles.get_tile(lcdc, 1) as *const _
+            tiles.get_tile(lcdc.tile_data_select, 1) as *const _
         );
         assert_eq!(
             &tiles.tiles[0] as *const _,
-            tiles.get_tile(lcdc, 0) as *const _
+            tiles.get_tile(lcdc.tile_data_select, 0) as *const _
         );
         assert_eq!(
             &tiles.tiles[1] as *const _,
-            tiles.get_tile(lcdc, 1) as *const _
+            tiles.get_tile(lcdc.tile_data_select, 1) as *const _
         );
 
         // 8800 method
-        let lcdc = 0.into();
+        let lcdc: LcdControlFlags = 0.into();
         assert_eq!(
             &tiles.tiles[256] as *const _,
-            tiles.get_tile(lcdc, 0) as *const _
+            tiles.get_tile(lcdc.tile_data_select, 0) as *const _
         );
         assert_eq!(
             &tiles.tiles[257] as *const _,
-            tiles.get_tile(lcdc, 1) as *const _
+            tiles.get_tile(lcdc.tile_data_select, 1) as *const _
         );
         assert_eq!(
             &tiles.tiles[255] as *const _,
-            tiles.get_tile(lcdc, 255) as *const _
+            tiles.get_tile(lcdc.tile_data_select, 255) as *const _
         );
     }
 }
