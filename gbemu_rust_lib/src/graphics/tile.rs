@@ -51,8 +51,6 @@ impl Tile {
     }
 
     pub fn set_byte(&mut self, address: u16, value: u8) {
-        println!("{}", address);
-
         assert!((address as usize) < TILE_SIZE);
 
         self.rows[address as usize / 2].bytes[address as usize % 2] = value;

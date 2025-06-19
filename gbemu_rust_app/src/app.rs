@@ -1,27 +1,37 @@
 #![allow(unused_variables)]
 
 mod gbemu_wgpu;
+mod stats;
 
-use chrono::Utc;
+use stats::Stats;
+
 use gbemu_rust_lib::prelude::Emulator;
 use gbemu_wgpu::GbemuCallback;
 use gbemu_wgpu::GbemuResources;
 
-use chrono::Duration;
-use chrono::NaiveDateTime;
 use eframe::egui_wgpu;
 use eframe::wgpu;
 use eframe::wgpu::util::DeviceExt as _;
 use egui::Ui;
+use poll_promise::Promise;
+use rfd::AsyncFileDialog;
 use std::num::NonZeroU64;
 
-pub struct GbemuApp {
-    emulator: Emulator,
+static CYCLES_PER_SECOND: u32 = 4_194_304;
 
+enum AppState {
+    Idle,
+    FileDialog(Promise<Vec<u8>>),
+    Running,
+}
+
+pub struct GbemuApp {
     angle: f32,
 
-    frame_time: Duration,
-    next_frame_time: NaiveDateTime,
+    stats: Stats,
+
+    state: AppState,
+    emulator: Option<Emulator>,
 }
 
 impl GbemuApp {
@@ -108,31 +118,74 @@ impl GbemuApp {
             });
 
         Some(Self {
-            emulator: Emulator::new().unwrap(),
             angle: 0.0,
-            frame_time: Duration::new(0, ((1.0 / 60.0) * (1_usize.pow(9) as f64)) as u32)?,
-            next_frame_time: Utc::now().naive_utc(),
+            stats: Stats::default(),
+            state: AppState::Idle,
+            emulator: None,
         })
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn execute<F: std::future::Future<Output = Vec<u8>> + Send + 'static>(f: F) -> Promise<Vec<u8>> {
+    Promise::spawn_async(f)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn execute<F: std::future::Future<Output = Vec<u8>> + 'static>(f: F) -> Promise<Vec<u8>> {
+    Promise::spawn_local(f)
+}
+
 impl eframe::App for GbemuApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        let _ = self.emulator.step();
+        match &self.state {
+            AppState::Idle => {},
+            AppState::FileDialog(promise) => {
+                if let Some(rom) = promise.ready() {
+                    self.emulator =
+                        Some(Emulator::new_from_buffer(rom.clone(), true, None, None).unwrap());
+                    self.state = AppState::Running;
+                }
+            },
+            AppState::Running => {
+                let dt = ctx.input(|i| i.stable_dt);
+                let cycles = (((CYCLES_PER_SECOND as f32) * dt).round() as u32)
+                    .min(((CYCLES_PER_SECOND as f32) * (1.0 / 10.0)) as u32);
+
+                self.stats
+                    .on_frame_update(ctx.input(|i| i.time), dt, cycles);
+
+                log::debug!("Executing {} emulator cycles", cycles);
+
+                for _ in 0..cycles {
+                    let _ = self.emulator.as_mut().unwrap().step();
+                }
+            },
+            #[allow(unreachable_patterns)]
+            _ => {
+                panic!("Unknown App State!");
+            },
+        }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // the top panel is often a good place for a menu bar:
 
             egui::menu::bar(ui, |ui| {
                 // no quit on web pages
-                if !cfg!(target_arch = "wasm32") {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open").clicked() {
+                        self.state = AppState::FileDialog(execute(async move {
+                            let file = AsyncFileDialog::new().pick_file().await.unwrap();
+                            file.read().await
+                        }));
+
+                        ui.close_menu();
+                    }
+                    if !cfg!(target_arch = "wasm32") && ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+                ui.add_space(16.0);
 
                 egui::widgets::global_theme_preference_buttons(ui);
             });
@@ -142,19 +195,19 @@ impl eframe::App for GbemuApp {
             egui::Frame::canvas(ui.style()).show(ui, |ui| {
                 self.paint_game_window(ui);
             });
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-            });
         });
 
-        self.next_frame_time += self.frame_time;
-        std::thread::sleep(
-            (self.next_frame_time - Utc::now().naive_utc())
-                .to_std()
-                .unwrap_or(std::time::Duration::ZERO),
-        );
+        egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                    self.stats.status_bar_ui(ui);
+                });
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.label("Status: Running")
+                });
+            })
+        });
 
         ctx.request_repaint();
     }
@@ -172,18 +225,4 @@ impl GbemuApp {
             GbemuCallback { angle: self.angle },
         ));
     }
-}
-
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
 }

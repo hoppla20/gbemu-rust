@@ -11,7 +11,6 @@ use renderer::Renderer;
 use renderer::WGPURenderer;
 use tile::TileData;
 use tile::TileMap;
-use tracing::debug;
 use tracing::instrument;
 use tracing::trace;
 
@@ -55,7 +54,11 @@ impl Ppu {
     pub fn render_background(&mut self) {
         let tile_map = &self.tile_maps[self.registers.lcd_control.background_tile_map as usize];
 
-        let map_y = (self.registers.get_screen_y() + self.registers.get_lcd_ly()) as usize;
+        let map_y = (self
+            .registers
+            .get_screen_y()
+            .overflowing_add(self.registers.get_lcd_ly()))
+        .0 as usize;
         let map_tile_y = map_y / 8;
         let mut screen_x = 0;
 
@@ -108,7 +111,7 @@ impl Ppu {
         match self.registers.lcd_status.ppu_mode {
             PpuMode::HBlank => {
                 if self.scanline_cycle as usize == MODE_OAM_SCAN_CYCLES + MODE_DRAWING_CYCLES {
-                    debug!(
+                    trace!(
                         "Rendering scanline {} to framebuffer",
                         self.registers.get_lcd_ly()
                     );
