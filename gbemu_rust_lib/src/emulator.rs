@@ -97,8 +97,10 @@ impl Emulator {
                 .request_interrupt(&mut self.system, Interrupt::Timer);
         }
 
-        self.system.graphics.step();
-        self.system.graphics.step();
+        if self.graphics_enabled {
+            self.system.graphics.step();
+            self.system.graphics.step();
+        }
 
         if self.system.io.interrupt_enable
             & <InterruptFlags as Into<u8>>::into(self.system.io.interrupt_flags)
