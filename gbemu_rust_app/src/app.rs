@@ -189,9 +189,12 @@ impl eframe::App for GbemuApp {
                 // no quit on web pages
                 ui.menu_button("File", |ui| {
                     if ui.button("Open").clicked() {
+                        let ctx_clone = ctx.clone();
                         self.state = AppState::FileDialog(execute(async move {
                             let file = AsyncFileDialog::new().pick_file().await.unwrap();
-                            file.read().await
+                            let result = file.read().await;
+                            ctx_clone.request_repaint();
+                            result
                         }));
 
                         ui.close_menu();
