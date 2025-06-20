@@ -15,6 +15,7 @@ use eframe::wgpu::util::DeviceExt as _;
 use egui::Ui;
 use poll_promise::Promise;
 use rfd::AsyncFileDialog;
+use std::fmt::Display;
 use std::num::NonZeroU64;
 
 static CYCLES_PER_SECOND: u32 = 4_194_304;
@@ -23,6 +24,18 @@ enum AppState {
     Idle,
     FileDialog(Promise<Vec<u8>>),
     Running,
+}
+
+impl Display for AppState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Idle => "Idle",
+            Self::FileDialog(_) => "File Dialog",
+            Self::Running => "Running",
+            #[allow(unreachable_patterns)]
+            _ => "Unknown",
+        })
+    }
 }
 
 pub struct GbemuApp {
@@ -160,6 +173,8 @@ impl eframe::App for GbemuApp {
                 for _ in 0..cycles {
                     let _ = self.emulator.as_mut().unwrap().step();
                 }
+
+                ctx.request_repaint();
             },
             #[allow(unreachable_patterns)]
             _ => {
@@ -181,6 +196,19 @@ impl eframe::App for GbemuApp {
 
                         ui.close_menu();
                     }
+
+                    if ui
+                        .add_enabled(
+                            matches!(self.state, AppState::Running),
+                            egui::Button::new("Stop"),
+                        )
+                        .clicked()
+                    {
+                        self.state = AppState::Idle;
+                        self.emulator = None;
+                        self.stats.reset();
+                    }
+
                     if !cfg!(target_arch = "wasm32") && ui.button("Quit").clicked() {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
@@ -200,16 +228,14 @@ impl eframe::App for GbemuApp {
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
-                    self.stats.status_bar_ui(ui);
+                    ui.label(format!("Status: {}", self.state));
                 });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    ui.label("Status: Running")
+                    self.stats.status_bar_ui(ui);
                 });
             })
         });
-
-        ctx.request_repaint();
     }
 }
 

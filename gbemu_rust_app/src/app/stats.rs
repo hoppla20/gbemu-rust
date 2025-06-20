@@ -34,8 +34,14 @@ impl Stats {
         if !result.is_nan() { result } else { 0.0 }
     }
 
+    pub fn reset(&mut self) {
+        self.frame_times.clear();
+        self.cycle_times.clear();
+    }
+
     pub fn status_bar_ui(&self, ui: &mut egui::Ui) {
         ui.label(format!("FPS (Hz): {:.2}", self.frames_per_second()));
+        ui.separator();
         ui.label(format!(
             "CPS (MHz): {:.2}",
             self.cycles_per_second() / 1000.0 / 1000.0
