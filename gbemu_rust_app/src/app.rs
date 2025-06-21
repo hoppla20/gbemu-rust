@@ -99,7 +99,126 @@ impl eframe::App for GbemuApp {
                 self.stats
                     .on_frame_update(ctx.input(|i| i.time), dt, cycles);
 
-                log::debug!("Executing {} emulator cycles", cycles);
+                let events = ctx.input(|i| i.events.clone());
+                for event in &events {
+                    #[allow(clippy::single_match)]
+                    match event {
+                        egui::Event::Key {
+                            key,
+                            pressed,
+                            repeat,
+                            modifiers,
+                            ..
+                        } => match (key, modifiers, repeat) {
+                            (egui::Key::ArrowDown, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "Arrown down key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .down_pressed(*pressed);
+                            },
+                            (egui::Key::ArrowUp, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "Arrown up key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .up_pressed(*pressed);
+                            },
+                            (egui::Key::ArrowLeft, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "Arrown left key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .left_pressed(*pressed);
+                            },
+                            (egui::Key::ArrowRight, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "Arrown right key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .right_pressed(*pressed);
+                            },
+                            (egui::Key::Z, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "B key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .b_pressed(*pressed);
+                            },
+                            (egui::Key::X, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "A key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .a_pressed(*pressed);
+                            },
+                            (egui::Key::Comma, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "SELECT key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .select_pressed(*pressed);
+                            },
+                            (egui::Key::Period, &egui::Modifiers::NONE, false) => {
+                                log::debug!(
+                                    "START key {}",
+                                    if *pressed { "pressed" } else { "released" }
+                                );
+                                self.emulator
+                                    .as_mut()
+                                    .unwrap()
+                                    .system
+                                    .io
+                                    .joypad
+                                    .start_pressed(*pressed);
+                            },
+                            _ => {},
+                        },
+                        _ => {},
+                    }
+                }
 
                 for _ in 0..cycles {
                     let _ = self.emulator.as_mut().unwrap().step();

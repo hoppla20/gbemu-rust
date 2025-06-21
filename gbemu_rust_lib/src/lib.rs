@@ -6,6 +6,7 @@ mod cartridge;
 mod cpu;
 mod emulator;
 mod graphics;
+mod joypad;
 mod memory;
 mod serial;
 mod system;

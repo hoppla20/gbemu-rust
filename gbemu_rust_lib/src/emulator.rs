@@ -91,15 +91,24 @@ impl Emulator {
             cpu_completed = self.cpu.step(&mut self.system)?
         }
 
-        let timer_interrupt = self.system.io.timer.step()?;
-        if timer_interrupt {
-            self.cpu
-                .request_interrupt(&mut self.system, Interrupt::Timer);
+        let mut v_blank_interrupt = false;
+        if self.graphics_enabled {
+            v_blank_interrupt = self.system.graphics.step();
+            v_blank_interrupt |= self.system.graphics.step();
         }
 
-        if self.graphics_enabled {
-            self.system.graphics.step();
-            self.system.graphics.step();
+        let timer_interrupt = self.system.io.timer.step()?;
+        let joypad_interrupt = self.system.io.joypad.interrupt();
+
+        if v_blank_interrupt {
+            self.cpu
+                .request_interrupt(&mut self.system, Interrupt::VBlank);
+        } else if timer_interrupt {
+            self.cpu
+                .request_interrupt(&mut self.system, Interrupt::Timer);
+        } else if joypad_interrupt {
+            self.cpu
+                .request_interrupt(&mut self.system, Interrupt::Joypad);
         }
 
         if self.system.io.interrupt_enable

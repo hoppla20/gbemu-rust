@@ -1,7 +1,8 @@
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::cpu::interrupts::InterruptFlags;
 use crate::graphics::Ppu;
+use crate::joypad::JoypadRegister;
 use crate::memory::mbc::Mbc;
 use crate::memory::{
     E_RAM_BANK_ADDR, ECHO_RAM_ADDR, H_RAM_ADDR, H_RAM_SIZE, IE_REGISTER_ADDR, IO_REGISTERS_ADDR,
@@ -13,6 +14,7 @@ use crate::timer::TimerRegisters;
 static CYCLES_PER_CLOCK_LOOKUP: [u16; 4] = [256, 4, 16, 64];
 
 pub struct IoRegisters {
+    pub joypad: JoypadRegister,
     pub interrupt_flags: InterruptFlags,
     pub interrupt_enable: u8,
     pub timer: TimerRegisters,
@@ -22,6 +24,7 @@ pub struct IoRegisters {
 impl IoRegisters {
     pub fn new(serial: Box<dyn Serial>) -> Self {
         IoRegisters {
+            joypad: JoypadRegister::default(),
             serial,
             interrupt_flags: 0.into(),
             interrupt_enable: 0,
@@ -57,6 +60,9 @@ impl System {
 
     pub fn get_io_register(&self, address: u16) -> u8 {
         match address {
+            // joypad
+            0xFF00 => self.io.joypad.into(),
+
             // serial
             0xFF01 => self.io.serial.read(),
             0xFF02 => self.io.serial.get_transfer_control(),
@@ -100,6 +106,9 @@ impl System {
 
     pub fn write_io_register(&mut self, address: u16, value: u8) {
         match address {
+            // joypad
+            0xFF00 => self.io.joypad.write(value),
+
             // serial
             0xFF01 => self.io.serial.write(value),
             0xFF02 => self.io.serial.set_transfer_control(value),
@@ -148,13 +157,19 @@ impl System {
                 if rel_addr < 32 * 32 {
                     self.graphics.tile_maps[0].get_byte(rel_addr)
                 } else {
-                    self.graphics.tile_maps[1].get_byte(rel_addr)
+                    self.graphics.tile_maps[1].get_byte(rel_addr - (32 * 32))
                 }
             },
             E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => self.mbc.read_ram(address - E_RAM_BANK_ADDR),
             W_RAM_BANK_0_ADDR..ECHO_RAM_ADDR => self.w_ram[(address - W_RAM_BANK_0_ADDR) as usize],
             ECHO_RAM_ADDR..OAM_ADDR => self.read_byte(address - ECHO_RAM_ADDR + W_RAM_BANK_0_ADDR),
-            OAM_ADDR..UNUSABLE_ADDR => unimplemented!("OAM not implemented!"),
+            OAM_ADDR..UNUSABLE_ADDR => {
+                warn!(
+                    "Reading from unimplemented OAM memory area 0x{:02X}",
+                    address
+                );
+                0x00
+            },
             UNUSABLE_ADDR..IO_REGISTERS_ADDR => {
                 if self.oam_transfer {
                     0xFF
@@ -180,7 +195,7 @@ impl System {
                 if rel_addr < 32 * 32 {
                     self.graphics.tile_maps[0].set_byte(rel_addr, value)
                 } else {
-                    self.graphics.tile_maps[1].set_byte(rel_addr, value)
+                    self.graphics.tile_maps[1].set_byte(rel_addr - (32 * 32), value)
                 }
             },
             E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => {
@@ -192,7 +207,9 @@ impl System {
             ECHO_RAM_ADDR..OAM_ADDR => {
                 self.write_byte(address - ECHO_RAM_ADDR + W_RAM_BANK_0_ADDR, value)
             },
-            OAM_ADDR..UNUSABLE_ADDR => unimplemented!("OAM not implemented!"),
+            OAM_ADDR..UNUSABLE_ADDR => {
+                warn!("Writing to unimplemented OAM memory area 0x{:02X}", address);
+            },
             UNUSABLE_ADDR..IO_REGISTERS_ADDR => {},
             IO_REGISTERS_ADDR..H_RAM_ADDR => self.write_io_register(address, value),
             H_RAM_ADDR..IE_REGISTER_ADDR => self.h_ram[(address - H_RAM_ADDR) as usize] = value,
