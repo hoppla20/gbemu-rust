@@ -107,7 +107,9 @@ impl Ppu {
         ppu_mode = format!("{:?}", self.registers.lcd_status.ppu_mode),
         scanline_cycle = self.scanline_cycle
     ))]
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> bool {
+        let mut interrupt = false;
+
         match self.registers.lcd_status.ppu_mode {
             PpuMode::HBlank => {
                 if self.scanline_cycle as usize == MODE_OAM_SCAN_CYCLES + MODE_DRAWING_CYCLES {
@@ -144,6 +146,7 @@ impl Ppu {
                     } else {
                         if self.registers.get_lcd_ly() as usize == LCD_HEIGHT {
                             self.renderer.v_blank();
+                            interrupt = true;
                         }
                         self.registers
                             .set_lcd_ly(self.registers.get_lcd_ly().wrapping_add(1));
@@ -163,6 +166,8 @@ impl Ppu {
                 }
             },
         }
+
+        return interrupt;
     }
 
     #[cfg(feature = "nogfx")]

@@ -75,10 +75,12 @@ pub struct TileMap {
 
 impl TileMap {
     pub fn get_byte(&self, address: u16) -> u8 {
+        assert!(address < 32 * 32);
         self.tiles[address as usize / 32][address as usize % 32]
     }
 
     pub fn set_byte(&mut self, address: u16, value: u8) {
+        assert!(address < 32 * 32);
         self.tiles[address as usize / 32][address as usize % 32] = value;
     }
 }

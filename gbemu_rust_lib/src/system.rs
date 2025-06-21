@@ -2,6 +2,7 @@ use tracing::{debug, warn};
 
 use crate::cpu::interrupts::InterruptFlags;
 use crate::graphics::Ppu;
+use crate::joypad::JoypadRegister;
 use crate::memory::mbc::Mbc;
 use crate::memory::{
     E_RAM_BANK_ADDR, ECHO_RAM_ADDR, H_RAM_ADDR, H_RAM_SIZE, IE_REGISTER_ADDR, IO_REGISTERS_ADDR,
@@ -13,6 +14,7 @@ use crate::timer::TimerRegisters;
 static CYCLES_PER_CLOCK_LOOKUP: [u16; 4] = [256, 4, 16, 64];
 
 pub struct IoRegisters {
+    pub joypad: JoypadRegister,
     pub interrupt_flags: InterruptFlags,
     pub interrupt_enable: u8,
     pub timer: TimerRegisters,
@@ -22,6 +24,7 @@ pub struct IoRegisters {
 impl IoRegisters {
     pub fn new(serial: Box<dyn Serial>) -> Self {
         IoRegisters {
+            joypad: JoypadRegister::default(),
             serial,
             interrupt_flags: 0.into(),
             interrupt_enable: 0,
@@ -57,6 +60,9 @@ impl System {
 
     pub fn get_io_register(&self, address: u16) -> u8 {
         match address {
+            // joypad
+            0xFF00 => self.io.joypad.into(),
+
             // serial
             0xFF01 => self.io.serial.read(),
             0xFF02 => self.io.serial.get_transfer_control(),
@@ -100,6 +106,9 @@ impl System {
 
     pub fn write_io_register(&mut self, address: u16, value: u8) {
         match address {
+            // joypad
+            0xFF00 => self.io.joypad.write(value),
+
             // serial
             0xFF01 => self.io.serial.write(value),
             0xFF02 => self.io.serial.set_transfer_control(value),
@@ -148,7 +157,7 @@ impl System {
                 if rel_addr < 32 * 32 {
                     self.graphics.tile_maps[0].get_byte(rel_addr)
                 } else {
-                    self.graphics.tile_maps[1].get_byte(rel_addr)
+                    self.graphics.tile_maps[1].get_byte(rel_addr - (32 * 32))
                 }
             },
             E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => self.mbc.read_ram(address - E_RAM_BANK_ADDR),
