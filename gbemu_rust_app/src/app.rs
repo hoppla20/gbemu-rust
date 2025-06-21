@@ -167,6 +167,18 @@ impl eframe::App for GbemuApp {
             });
         });
 
+        egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                    ui.label(format!("Status: {}", self.state));
+                });
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    self.stats.status_bar_ui(ui);
+                });
+            })
+        });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(
                 egui::Layout::centered_and_justified(egui::Direction::TopDown),
@@ -209,18 +221,6 @@ impl eframe::App for GbemuApp {
                     );
                 },
             );
-        });
-
-        egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
-                    ui.label(format!("Status: {}", self.state));
-                });
-
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    self.stats.status_bar_ui(ui);
-                });
-            })
         });
     }
 }
