@@ -14,8 +14,8 @@ use tile::TileMap;
 use tracing::instrument;
 use tracing::trace;
 
-const LCD_WIDTH: usize = 160;
-const LCD_HEIGHT: usize = 144;
+pub const LCD_WIDTH: usize = 160;
+pub const LCD_HEIGHT: usize = 144;
 
 const MODE_OAM_SCAN_CYCLES: usize = 80 / 4;
 const MODE_DRAWING_CYCLES: usize = 172 / 4;

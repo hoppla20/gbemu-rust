@@ -24,6 +24,17 @@ impl From<u8> for Pixel {
     }
 }
 
+impl From<Pixel> for u8 {
+    fn from(value: Pixel) -> Self {
+        match value {
+            Pixel::Color0 => 0,
+            Pixel::Color1 => 1,
+            Pixel::Color2 => 2,
+            Pixel::Color3 => 3,
+        }
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct TileRow {
     pub bytes: [u8; 2],
