@@ -302,7 +302,7 @@ impl Registers {
 
     pub fn alu_sra_r8(&mut self, operand: ArithmeticOperand) -> u8 {
         let result = (self.get_arithmetic_target_r8(operand) >> 1)
-            | (self.get_arithmetic_target_r8(operand) & 0b10000000);
+            | (self.get_arithmetic_target_r8(operand) & 0b1000_0000);
         self.set_flag_zero(result == 0);
         self.set_flag_subtraction(false);
         self.set_flag_half_carry(false);
@@ -716,7 +716,7 @@ mod tests {
         registers.set_flag_carry(true);
         registers.alu_rra();
         assert_eq!(
-            registers.a, 0b10000000,
+            registers.a, 0b1000_0000,
             "Register A's values is not correct!"
         );
         assert!(!registers.get_flag_carry(), "The carry flag is still set!");
@@ -725,7 +725,7 @@ mod tests {
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
         registers.alu_rla();
         assert_eq!(
-            registers.a, 0b00000001,
+            registers.a, 0b0000_0001,
             "Register A's values is not correct!"
         );
         assert!(!registers.get_flag_carry(), "The carry flag is still set!");
@@ -736,12 +736,12 @@ mod tests {
         // rotate with c
 
         registers = Registers {
-            a: 0b00000010,
+            a: 0b0000_0010,
             ..Registers::default()
         };
         registers.alu_rrca();
         assert_eq!(
-            registers.a, 0b00000001,
+            registers.a, 0b0000_0001,
             "Register A's values is not correct!"
         );
         assert!(
@@ -750,19 +750,19 @@ mod tests {
         );
         registers.alu_rrca();
         assert_eq!(
-            registers.a, 0b10000000,
+            registers.a, 0b1000_0000,
             "Register A's values is not correct!"
         );
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
         registers.alu_rlca();
         assert_eq!(
-            registers.a, 0b00000001,
+            registers.a, 0b0000_0001,
             "Register A's values is not correct!"
         );
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
         registers.alu_rlca();
         assert_eq!(
-            registers.a, 0b00000010,
+            registers.a, 0b0000_0010,
             "Register A's values is not correct!"
         );
         assert!(
@@ -773,12 +773,12 @@ mod tests {
         // arithmetic shifts
 
         registers = Registers {
-            a: 0b00000010,
+            a: 0b0000_0010,
             ..Registers::default()
         };
         registers.alu_sra_r8(ArithmeticOperand::A);
         assert_eq!(
-            registers.a, 0b00000001,
+            registers.a, 0b0000_0001,
             "Register A's values is not correct!"
         );
         assert!(
@@ -790,12 +790,12 @@ mod tests {
         assert!(registers.get_flag_carry(), "The carry flag should be set!");
 
         registers = Registers {
-            a: 0b01000000,
+            a: 0b0100_0000,
             ..Registers::default()
         };
         registers.alu_sla_r8(ArithmeticOperand::A);
         assert_eq!(
-            registers.a, 0b10000000,
+            registers.a, 0b1000_0000,
             "Register A's values is not correct!"
         );
         assert!(

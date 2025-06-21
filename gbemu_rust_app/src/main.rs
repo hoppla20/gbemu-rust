@@ -3,9 +3,11 @@
 
 mod app;
 
+use app::GbemuApp;
+
 #[cfg(not(target_arch = "wasm32"))]
-fn main() {
-    use app::GbemuApp;
+#[tokio::main]
+async fn main() {
     use tracing_subscriber::EnvFilter;
 
     tracing_subscriber::fmt()
@@ -17,23 +19,23 @@ fn main() {
     let native_options = eframe::NativeOptions {
         // TODO: icons
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([400.0, 300.0])
-            .with_min_inner_size([300.0, 220.0]),
+            .with_inner_size([400.0, 400.0])
+            .with_min_inner_size([400.0, 400.0]),
         ..eframe::NativeOptions::default()
     };
 
     eframe::run_native(
         "eframe template",
         native_options,
-        Box::new(|cc| Ok(Box::new(GbemuApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc).unwrap()))),
     )
     .unwrap();
 }
 
 #[cfg(target_arch = "wasm32")]
 fn main() {
-    use app::GbemuApp;
     use eframe::wasm_bindgen::JsCast as _;
+    use tracing_subscriber::filter::LevelFilter;
     use tracing_subscriber::fmt::format::Pretty;
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::util::SubscriberInitExt;
@@ -48,6 +50,7 @@ fn main() {
     tracing_subscriber::registry()
         .with(fmt_layer)
         .with(perf_layer)
+        .with(LevelFilter::WARN)
         .init();
 
     let web_options = eframe::WebOptions::default();
@@ -68,7 +71,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(GbemuApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc).unwrap()))),
             )
             .await;
 

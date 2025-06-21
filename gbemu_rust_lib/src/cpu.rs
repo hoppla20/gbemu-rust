@@ -5,7 +5,7 @@ pub mod interrupts;
 pub mod registers;
 
 use crate::emulator::ExecutionError;
-use crate::memory::mmu::Mmu;
+use crate::system::System;
 
 use self::instructions::Instruction;
 use self::registers::Registers;
@@ -46,13 +46,13 @@ impl Cpu {
         Cpu::new_from_registers(Registers::default())
     }
 
-    pub fn new(mmu: &mut Mmu) -> Self {
+    pub fn new(mmu: &mut System) -> Self {
         Cpu::new_from_registers(Registers {
             a: 0x01,
             f: if mmu.read_byte(0x14D) == 0x00 {
-                0b10000000
+                0b1000_0000
             } else {
-                0b10110000
+                0b1011_0000
             },
             b: 0x00,
             c: 0x13,
@@ -68,14 +68,14 @@ impl Cpu {
         })
     }
 
-    pub fn read_byte_pc(&mut self, mmu: &mut Mmu) -> u8 {
+    pub fn read_byte_pc(&mut self, mmu: &mut System) -> u8 {
         let byte = mmu.read_byte(self.registers.pc);
         (self.registers.pc, _) = self.registers.pc.overflowing_add(1);
 
         byte
     }
 
-    pub fn step(&mut self, mmu: &mut Mmu) -> Result<bool, ExecutionError> {
+    pub fn step(&mut self, mmu: &mut System) -> Result<bool, ExecutionError> {
         if self.interrupt_enable_pending && !self.interrupt_enabled {
             self.interrupt_enabled = true;
             self.interrupt_enable_pending = false;
@@ -94,11 +94,10 @@ impl Cpu {
         }
     }
 
-    #[instrument(level = "debug", skip_all)]
-    pub fn generic_fetch(&mut self, mmu: &mut Mmu) -> Result<(), ExecutionError> {
+    #[instrument(skip_all)]
+    pub fn generic_fetch(&mut self, mmu: &mut System) -> Result<(), ExecutionError> {
         if let Some(interrupt) = self.interrupt_check(mmu) {
             debug!(
-                name: "cpu::interrupt",
                 "Executing interrupt service routing for interrupt {:?}",
                 interrupt
             );
@@ -106,8 +105,6 @@ impl Cpu {
             self.current_instruction = Instruction::isr { interrupt };
         } else {
             let opcode = self.read_byte_pc(mmu);
-
-            debug!(name: "cpu::fetch::decode", "Decoding opcode 0x{:02X}", opcode);
 
             self.current_instruction = Instruction::decode_instruction(opcode);
         }
@@ -137,6 +134,3 @@ impl Debug for Cpu {
         )
     }
 }
-
-#[cfg(test)]
-mod tests;

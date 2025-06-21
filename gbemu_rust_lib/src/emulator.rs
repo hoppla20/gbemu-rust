@@ -5,10 +5,11 @@ use tracing::trace;
 use crate::cpu::Cpu;
 use crate::cpu::instructions::Instruction;
 use crate::cpu::interrupts::Interrupt;
+use crate::cpu::interrupts::InterruptFlags;
 use crate::memory::mbc::new_mbc_from_buffer;
-use crate::memory::mmu::Mmu;
 use crate::serial::LogSerial;
 use crate::serial::Serial;
+use crate::system::System;
 
 macro_rules! trace_cpu_state {
     ($self:ident) => {
@@ -16,10 +17,10 @@ macro_rules! trace_cpu_state {
             name: "cpu::state",
             "{:?} PCMEM:{:02X},{:02X},{:02X},{:02X}",
             $self.cpu,
-            $self.mmu.read_byte($self.cpu.registers.pc),
-            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(1)),
-            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(2)),
-            $self.mmu.read_byte($self.cpu.registers.pc.wrapping_add(3)),
+            $self.system.read_byte($self.cpu.registers.pc),
+            $self.system.read_byte($self.cpu.registers.pc.wrapping_add(1)),
+            $self.system.read_byte($self.cpu.registers.pc.wrapping_add(2)),
+            $self.system.read_byte($self.cpu.registers.pc.wrapping_add(3)),
         )
     };
 }
@@ -33,16 +34,19 @@ pub enum ExecutionError {
 
 pub struct Emulator {
     pub cpu: Cpu,
-    pub mmu: Mmu,
+    pub system: System,
+
+    graphics_enabled: bool,
 }
 
 impl Emulator {
     pub fn new() -> Result<Self, String> {
-        Self::new_from_buffer(vec![0; 32 * 1024], None, None)
+        Self::new_from_buffer(vec![0; 32 * 1024], true, None, None)
     }
 
     pub fn new_from_buffer(
         rom: Vec<u8>,
+        graphics_enabled: bool,
         cpu_option: Option<Cpu>,
         serial_option: Option<Box<dyn Serial>>,
     ) -> Result<Self, String> {
@@ -51,7 +55,7 @@ impl Emulator {
         } else {
             Box::new(LogSerial::default())
         };
-        let mut mmu = Mmu::new(new_mbc_from_buffer(rom)?, serial);
+        let mut mmu = System::new(new_mbc_from_buffer(rom)?, serial);
 
         let mut result = Self {
             cpu: if let Some(cpu) = cpu_option {
@@ -59,7 +63,9 @@ impl Emulator {
             } else {
                 Cpu::new(&mut mmu)
             },
-            mmu,
+            system: mmu,
+
+            graphics_enabled,
         };
 
         result.init();
@@ -67,28 +73,39 @@ impl Emulator {
         Ok(result)
     }
 
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(skip_all)]
     fn init(&mut self) {
         trace_cpu_state!(self);
 
         self.cpu.current_instruction =
-            Instruction::decode_instruction(self.mmu.read_byte(self.cpu.registers.pc));
+            Instruction::decode_instruction(self.system.read_byte(self.cpu.registers.pc));
         (self.cpu.registers.pc, _) = self.cpu.registers.pc.overflowing_add(1);
     }
 
-    #[instrument(level = "debug", skip_all, fields(instruction = format!("{:?}", self.cpu.current_instruction)))]
+    #[instrument(skip_all, fields(
+        instruction = format!("{:?}", self.cpu.current_instruction)
+    ))]
     pub fn step(&mut self) -> Result<(), ExecutionError> {
         let mut cpu_completed = false;
         if !self.cpu.halted {
-            cpu_completed = self.cpu.step(&mut self.mmu)?
+            cpu_completed = self.cpu.step(&mut self.system)?
         }
 
-        let timer_interrupt = self.mmu.io.timer.step()?;
+        let timer_interrupt = self.system.io.timer.step()?;
         if timer_interrupt {
-            self.cpu.request_interrupt(&mut self.mmu, Interrupt::Timer);
+            self.cpu
+                .request_interrupt(&mut self.system, Interrupt::Timer);
         }
 
-        if self.mmu.io.interrupt_enable & self.mmu.io.interrupt_flags != 0 {
+        if self.graphics_enabled {
+            self.system.graphics.step();
+            self.system.graphics.step();
+        }
+
+        if self.system.io.interrupt_enable
+            & <InterruptFlags as Into<u8>>::into(self.system.io.interrupt_flags)
+            != 0
+        {
             self.cpu.halted = false;
         }
 
@@ -100,7 +117,7 @@ impl Emulator {
                 },
             }
 
-            self.cpu.generic_fetch(&mut self.mmu)?;
+            self.cpu.generic_fetch(&mut self.system)?;
         }
 
         Ok(())
