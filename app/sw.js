@@ -2,8 +2,8 @@ var cacheName = 'gbemu-rust-app';
 var filesToCache = [
   './',
   './index.html',
-  './eframe_template.js',
-  './eframe_template_bg.wasm',
+  './gbemu_rust_app.js',
+  './gbemu_rust_app_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */
