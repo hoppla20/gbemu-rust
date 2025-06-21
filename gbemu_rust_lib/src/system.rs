@@ -1,4 +1,4 @@
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::cpu::interrupts::InterruptFlags;
 use crate::graphics::Ppu;
@@ -154,7 +154,13 @@ impl System {
             E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => self.mbc.read_ram(address - E_RAM_BANK_ADDR),
             W_RAM_BANK_0_ADDR..ECHO_RAM_ADDR => self.w_ram[(address - W_RAM_BANK_0_ADDR) as usize],
             ECHO_RAM_ADDR..OAM_ADDR => self.read_byte(address - ECHO_RAM_ADDR + W_RAM_BANK_0_ADDR),
-            OAM_ADDR..UNUSABLE_ADDR => unimplemented!("OAM not implemented!"),
+            OAM_ADDR..UNUSABLE_ADDR => {
+                warn!(
+                    "Reading from unimplemented OAM memory area 0x{:02X}",
+                    address
+                );
+                0x00
+            },
             UNUSABLE_ADDR..IO_REGISTERS_ADDR => {
                 if self.oam_transfer {
                     0xFF
@@ -180,7 +186,7 @@ impl System {
                 if rel_addr < 32 * 32 {
                     self.graphics.tile_maps[0].set_byte(rel_addr, value)
                 } else {
-                    self.graphics.tile_maps[1].set_byte(rel_addr, value)
+                    self.graphics.tile_maps[1].set_byte(rel_addr - (32 * 32), value)
                 }
             },
             E_RAM_BANK_ADDR..W_RAM_BANK_0_ADDR => {
@@ -192,7 +198,9 @@ impl System {
             ECHO_RAM_ADDR..OAM_ADDR => {
                 self.write_byte(address - ECHO_RAM_ADDR + W_RAM_BANK_0_ADDR, value)
             },
-            OAM_ADDR..UNUSABLE_ADDR => unimplemented!("OAM not implemented!"),
+            OAM_ADDR..UNUSABLE_ADDR => {
+                warn!("Writing to unimplemented OAM memory area 0x{:02X}", address);
+            },
             UNUSABLE_ADDR..IO_REGISTERS_ADDR => {},
             IO_REGISTERS_ADDR..H_RAM_ADDR => self.write_io_register(address, value),
             H_RAM_ADDR..IE_REGISTER_ADDR => self.h_ram[(address - H_RAM_ADDR) as usize] = value,
