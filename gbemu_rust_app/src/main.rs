@@ -25,7 +25,7 @@ async fn main() {
     };
 
     eframe::run_native(
-        "eframe template",
+        "gbemu",
         native_options,
         Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc).unwrap()))),
     )
