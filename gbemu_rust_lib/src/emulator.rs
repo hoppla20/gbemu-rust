@@ -86,6 +86,10 @@ impl Emulator {
         instruction = format!("{:?}", self.cpu.current_instruction)
     ))]
     pub fn step(&mut self) -> Result<(), ExecutionError> {
+        if self.system.oam_transfer {
+            self.system.oam_transfer_step();
+        }
+
         let mut cpu_completed = false;
         if !self.cpu.halted {
             cpu_completed = self.cpu.step(&mut self.system)?
