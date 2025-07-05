@@ -12,13 +12,13 @@ use gbemu_rust_lib::prelude::Emulator;
 
 use poll_promise::Promise;
 use rfd::AsyncFileDialog;
+use std::cmp::min;
 use std::fmt::Display;
 
-static TEXTURE_SIZE: [usize; 2] = [LCD_WIDTH, LCD_HEIGHT];
-
-static CYCLES_PER_SECOND: u32 = 4_194_304;
-
-static DEFAULT_PALETTE: [egui::Color32; 4] = [
+const MIN_FPS: f32 = 10.0;
+const TEXTURE_SIZE: [usize; 2] = [LCD_WIDTH, LCD_HEIGHT];
+const CYCLES_PER_SECOND: u32 = 4_194_304;
+const DEFAULT_PALETTE: [egui::Color32; 4] = [
     egui::Color32::from_rgba_premultiplied(0xe0, 0xf0, 0xe7, 0xff), // White
     egui::Color32::from_rgba_premultiplied(0x8b, 0xa3, 0x94, 0xff), // Light gray
     egui::Color32::from_rgba_premultiplied(0x55, 0x64, 0x5a, 0xff), // Dark gray
@@ -93,8 +93,10 @@ impl eframe::App for GbemuApp {
             },
             AppState::Running => {
                 let dt = ctx.input(|i| i.stable_dt);
-                let cycles = (((CYCLES_PER_SECOND as f32) * dt).round() as u32)
-                    .min(((CYCLES_PER_SECOND as f32) * (1.0 / 10.0)) as u32);
+                let cycles = min(
+                    ((CYCLES_PER_SECOND as f32) * dt).round() as u32,
+                    ((CYCLES_PER_SECOND as f32) * (1.0 / MIN_FPS)) as u32,
+                ) / 4;
 
                 self.stats
                     .on_frame_update(ctx.input(|i| i.time), dt, cycles);
