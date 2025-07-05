@@ -100,7 +100,7 @@ jobs:
       - name: Run tests and generate coverage
         run: >-
           nix develop --command
-          cargo llvm-cov nextest --cargo-profile release --no-cfg-coverage --html
+          cargo llvm-cov nextest --package gbemu_rust_lib --cargo-profile release --no-cfg-coverage --html
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
