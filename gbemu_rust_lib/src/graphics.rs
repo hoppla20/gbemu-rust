@@ -4,7 +4,6 @@ pub mod renderer;
 pub mod tile;
 
 use std::array::from_fn;
-use std::cmp::max;
 use std::cmp::min;
 
 use object::Object;
