@@ -1,11 +1,14 @@
 #![allow(unused_variables)]
 
+mod input;
 mod stats;
+mod task;
 
 use egui::Vec2;
 use gbemu_rust_lib::prelude::LCD_HEIGHT;
 use gbemu_rust_lib::prelude::LCD_WIDTH;
 use gbemu_rust_lib::prelude::Pixel;
+use input::InputHandler;
 use stats::Stats;
 
 use gbemu_rust_lib::prelude::Emulator;
@@ -24,16 +27,6 @@ const DEFAULT_PALETTE: [egui::Color32; 4] = [
     egui::Color32::from_rgba_premultiplied(0x55, 0x64, 0x5a, 0xff), // Dark gray
     egui::Color32::from_rgba_premultiplied(0x34, 0x3d, 0x37, 0xff), // Black
 ];
-
-#[cfg(not(target_arch = "wasm32"))]
-fn execute<F: std::future::Future<Output = Vec<u8>> + Send + 'static>(f: F) -> Promise<Vec<u8>> {
-    Promise::spawn_async(f)
-}
-
-#[cfg(target_arch = "wasm32")]
-fn execute<F: std::future::Future<Output = Vec<u8>> + 'static>(f: F) -> Promise<Vec<u8>> {
-    Promise::spawn_local(f)
-}
 
 enum AppState {
     Idle,
@@ -57,6 +50,7 @@ pub struct GbemuApp {
     scale: usize,
 
     stats: Stats,
+    input_handler: InputHandler,
 
     state: AppState,
     emulator: Option<Emulator>,
@@ -65,12 +59,20 @@ pub struct GbemuApp {
 }
 
 impl GbemuApp {
-    pub fn new<'a>(cc: &'a &eframe::CreationContext<'a>) -> Option<Self> {
+    pub fn new<'a>(
+        cc: &'a &eframe::CreationContext<'a>,
+        emulator: Option<Emulator>,
+    ) -> Option<Self> {
         Some(Self {
             scale: 2,
             stats: Stats::default(),
-            state: AppState::Idle,
-            emulator: None,
+            input_handler: InputHandler::default(),
+            state: if emulator.is_none() {
+                AppState::Idle
+            } else {
+                AppState::Running
+            },
+            emulator,
             texture: cc.egui_ctx.load_texture(
                 "gbemu",
                 egui::ColorImage::new(TEXTURE_SIZE, DEFAULT_PALETTE[0]),
@@ -111,113 +113,13 @@ impl eframe::App for GbemuApp {
                             repeat,
                             modifiers,
                             ..
-                        } => match (key, modifiers, repeat) {
-                            (egui::Key::ArrowDown, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "Arrown down key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .down_pressed(*pressed);
-                            },
-                            (egui::Key::ArrowUp, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "Arrown up key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .up_pressed(*pressed);
-                            },
-                            (egui::Key::ArrowLeft, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "Arrown left key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .left_pressed(*pressed);
-                            },
-                            (egui::Key::ArrowRight, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "Arrown right key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .right_pressed(*pressed);
-                            },
-                            (egui::Key::Z, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "B key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .b_pressed(*pressed);
-                            },
-                            (egui::Key::X, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "A key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .a_pressed(*pressed);
-                            },
-                            (egui::Key::Comma, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "SELECT key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .select_pressed(*pressed);
-                            },
-                            (egui::Key::Period, &egui::Modifiers::NONE, false) => {
-                                log::debug!(
-                                    "START key {}",
-                                    if *pressed { "pressed" } else { "released" }
-                                );
-                                self.emulator
-                                    .as_mut()
-                                    .unwrap()
-                                    .system
-                                    .io
-                                    .joypad
-                                    .start_pressed(*pressed);
-                            },
-                            _ => {},
-                        },
+                        } => self.input_handler.handle(
+                            self.emulator.as_mut().unwrap(),
+                            key,
+                            pressed,
+                            repeat,
+                            modifiers,
+                        ),
                         _ => {},
                     }
                 }
@@ -242,7 +144,7 @@ impl eframe::App for GbemuApp {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open").clicked() {
                         let ctx_clone = ctx.clone();
-                        self.state = AppState::FileDialog(execute(async move {
+                        self.state = AppState::FileDialog(task::execute(async move {
                             let file = AsyncFileDialog::new().pick_file().await.unwrap();
                             let result = file.read().await;
                             ctx_clone.request_repaint();

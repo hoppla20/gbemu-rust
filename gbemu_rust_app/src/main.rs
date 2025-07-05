@@ -4,10 +4,19 @@
 mod app;
 
 use app::GbemuApp;
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    file_path: Option<String>,
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() {
+    use gbemu_rust_lib::prelude::Emulator;
     use tracing_subscriber::EnvFilter;
 
     tracing_subscriber::fmt()
@@ -24,10 +33,25 @@ async fn main() {
         ..eframe::NativeOptions::default()
     };
 
+    let args = Args::parse();
+    let mut emulator: Option<Emulator> = None;
+
+    if let Some(file_path) = args.file_path.as_deref() {
+        match std::fs::read(file_path) {
+            Ok(rom) => {
+                emulator = Some(Emulator::new_from_buffer(rom, true, None, None).unwrap());
+            },
+            Err(err) => {
+                log::error!("{}", err);
+                todo!("Handle error if file read is not successful!");
+            },
+        }
+    }
+
     eframe::run_native(
         "gbemu",
         native_options,
-        Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc).unwrap()))),
+        Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc, emulator).unwrap()))),
     )
     .unwrap();
 }
@@ -71,7 +95,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc).unwrap()))),
+                Box::new(|cc| Ok(Box::new(GbemuApp::new(&cc, None).unwrap()))),
             )
             .await;
 
