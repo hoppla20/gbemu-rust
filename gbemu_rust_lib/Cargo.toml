@@ -15,12 +15,6 @@ harness = false
 name = "blargg_cpu_instrs_individual"
 required-features = ["nogfx"]
 
-[profile.dev.package."*"]
-opt-level = 2
-
-[profile.release]
-opt-level = 2
-
 [dependencies]
 tracing.workspace = true
 
