@@ -41,7 +41,7 @@ pub struct TileRow {
 }
 
 impl TileRow {
-    pub fn get_pixel(&self, index: u8) -> Pixel {
+    pub fn get_pixel(&self, index: usize) -> Pixel {
         let bit = 7 - index;
         let bit1 = self.bytes[1] >> bit & 1;
         let bit2 = self.bytes[0] >> bit & 1;
@@ -66,6 +66,16 @@ impl Tile {
 
         self.rows[address as usize / 2].bytes[address as usize % 2] = value;
     }
+
+    pub fn get_row(&self, row: usize) -> [Pixel; 8] {
+        let mut result: [Pixel; 8] = [Pixel::default(); 8];
+
+        (0..8).for_each(|i| {
+            result[i] = self.rows[row].get_pixel(i);
+        });
+
+        result
+    }
 }
 
 #[derive(Default)]
@@ -75,10 +85,12 @@ pub struct TileMap {
 
 impl TileMap {
     pub fn get_byte(&self, address: u16) -> u8 {
+        assert!(address < 32 * 32);
         self.tiles[address as usize / 32][address as usize % 32]
     }
 
     pub fn set_byte(&mut self, address: u16, value: u8) {
+        assert!(address < 32 * 32);
         self.tiles[address as usize / 32][address as usize % 32] = value;
     }
 }

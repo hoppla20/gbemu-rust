@@ -30,9 +30,23 @@ impl From<SpriteFlags> for u8 {
     }
 }
 
+#[derive(Debug)]
 pub struct Object {
     pub pos_x: u8,
     pub pos_y: u8,
     pub tile_number: u8,
     pub sprite_flags: SpriteFlags,
+}
+
+impl From<&[u8]> for Object {
+    fn from(value: &[u8]) -> Self {
+        assert!(value.len() == 4);
+
+        Self {
+            pos_y: value[0],
+            pos_x: value[1],
+            tile_number: value[2],
+            sprite_flags: value[3].into(),
+        }
+    }
 }

@@ -4,7 +4,10 @@ pub mod renderer;
 pub mod tile;
 
 use std::array::from_fn;
+use std::cmp::max;
+use std::cmp::min;
 
+use object::Object;
 use registers::GraphicsRegisters;
 use registers::PpuMode;
 use renderer::Renderer;
@@ -13,6 +16,8 @@ use tile::TileData;
 use tile::TileMap;
 use tracing::instrument;
 use tracing::trace;
+
+use crate::memory::OAM_SIZE;
 
 pub const LCD_WIDTH: usize = 160;
 pub const LCD_HEIGHT: usize = 144;
@@ -26,9 +31,12 @@ const SCANLINE_CYCLES: usize = MODE_OAM_SCAN_CYCLES + MODE_DRAWING_CYCLES + MODE
 const NUM_LINES: usize = 153;
 
 pub struct Ppu {
+    pub registers: GraphicsRegisters,
     pub tile_data: TileData,
     pub tile_maps: [TileMap; 2],
-    pub registers: GraphicsRegisters,
+
+    oam: [u8; OAM_SIZE],
+    object_buffer: Vec<Object>,
 
     pub renderer: Box<dyn Renderer>,
 
@@ -38,9 +46,12 @@ pub struct Ppu {
 impl Default for Ppu {
     fn default() -> Self {
         Self {
+            registers: GraphicsRegisters::new(),
             tile_data: TileData::default(),
             tile_maps: from_fn(|_| TileMap::default()),
-            registers: GraphicsRegisters::new(),
+
+            oam: [0; OAM_SIZE],
+            object_buffer: Vec::with_capacity(10),
 
             renderer: Box::new(WGPURenderer::default()),
 
@@ -50,6 +61,18 @@ impl Default for Ppu {
 }
 
 impl Ppu {
+    pub fn read_oam_byte(&self, address: u16) -> u8 {
+        assert!((address as usize) < OAM_SIZE);
+
+        self.oam[address as usize]
+    }
+
+    pub fn write_oam_byte(&mut self, address: u16, value: u8) {
+        assert!((address as usize) < OAM_SIZE);
+
+        self.oam[address as usize] = value;
+    }
+
     #[instrument(skip_all, fields(ly = self.registers.get_lcd_ly()))]
     pub fn render_background(&mut self) {
         let tile_map = &self.tile_maps[self.registers.lcd_control.background_tile_map as usize];
@@ -79,16 +102,7 @@ impl Ppu {
                 iter_stop = LCD_WIDTH as u8 - (self.registers.get_screen_x() + (tile_x as u8 * 8));
             }
             for i in iter_start..iter_stop {
-                let pixel = row.get_pixel(i);
-
-                trace!(
-                    "Rendering color {:?} at position [{}, {}] with background tile {} from map {}",
-                    pixel,
-                    screen_x,
-                    self.registers.get_lcd_ly(),
-                    tile_number,
-                    self.registers.lcd_control.background_tile_map
-                );
+                let pixel = row.get_pixel(i as usize);
 
                 self.renderer
                     .set_pixel(pixel, self.registers.get_lcd_ly() as usize, screen_x);
@@ -100,14 +114,34 @@ impl Ppu {
 
     pub fn render_window(&mut self) {}
 
-    pub fn render_objects(&mut self) {}
+    pub fn render_objects(&mut self) {
+        for obj in &self.object_buffer {
+            let tile = self.tile_data.get_tile(true, obj.tile_number);
+            // TODO: double height mode
+            let tile_row = self.registers.get_lcd_ly() - (obj.pos_y - 16);
+            let pixels = tile.get_row(tile_row as usize);
+
+            let low = min(0, obj.pos_x as isize - 8).unsigned_abs();
+            let high = min(8, LCD_WIDTH - obj.pos_x as usize);
+
+            (low..high).for_each(|x| {
+                self.renderer.set_pixel(
+                    pixels[x],
+                    self.registers.get_lcd_ly() as usize,
+                    obj.pos_x as usize - 8 + x,
+                );
+            });
+        }
+    }
 
     #[cfg(not(feature = "nogfx"))]
     #[instrument(skip_all, fields(
         ppu_mode = format!("{:?}", self.registers.lcd_status.ppu_mode),
         scanline_cycle = self.scanline_cycle
     ))]
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> bool {
+        let mut interrupt = false;
+
         match self.registers.lcd_status.ppu_mode {
             PpuMode::HBlank => {
                 if self.scanline_cycle as usize == MODE_OAM_SCAN_CYCLES + MODE_DRAWING_CYCLES {
@@ -127,6 +161,7 @@ impl Ppu {
                 if self.scanline_cycle as usize == SCANLINE_CYCLES {
                     self.scanline_cycle = 0;
                     self.registers.inc_lcd_ly();
+                    self.object_buffer.clear();
                     if (self.registers.get_lcd_ly() as usize) < LCD_HEIGHT {
                         self.registers.lcd_status.ppu_mode = PpuMode::OamScan;
                     } else {
@@ -144,6 +179,7 @@ impl Ppu {
                     } else {
                         if self.registers.get_lcd_ly() as usize == LCD_HEIGHT {
                             self.renderer.v_blank();
+                            interrupt = true;
                         }
                         self.registers
                             .set_lcd_ly(self.registers.get_lcd_ly().wrapping_add(1));
@@ -151,6 +187,31 @@ impl Ppu {
                 }
             },
             PpuMode::OamScan => {
+                if self.scanline_cycle == 0 {
+                    trace!(
+                        "Searching for objects on scanline {}",
+                        self.registers.get_lcd_ly()
+                    );
+
+                    for i in 0..OAM_SIZE / 4 {
+                        let obj: Object = self.oam[i * 4..(i + 1) * 4].into();
+
+                        let obj_height = if self.registers.lcd_control.sprite_double_size {
+                            16
+                        } else {
+                            8
+                        };
+
+                        if self.object_buffer.len() < 10
+                            && (self.registers.get_lcd_ly() >= obj.pos_y - 16)
+                            && (self.registers.get_lcd_ly() < obj.pos_y + obj_height - 16)
+                        {
+                            trace!("Found object {:?}", obj);
+                            self.object_buffer.push(obj);
+                        }
+                    }
+                }
+
                 self.scanline_cycle = self.scanline_cycle.wrapping_add(1);
                 if self.scanline_cycle as usize == MODE_OAM_SCAN_CYCLES {
                     self.registers.lcd_status.ppu_mode = PpuMode::Drawing;
@@ -163,6 +224,8 @@ impl Ppu {
                 }
             },
         }
+
+        return interrupt;
     }
 
     #[cfg(feature = "nogfx")]
