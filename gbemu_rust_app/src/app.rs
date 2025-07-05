@@ -30,7 +30,7 @@ const DEFAULT_PALETTE: [egui::Color32; 4] = [
 
 enum AppState {
     Idle,
-    FileDialog(Promise<Vec<u8>>),
+    FileDialog(Promise<Option<Vec<u8>>>),
     Running,
 }
 
@@ -87,10 +87,14 @@ impl eframe::App for GbemuApp {
         match &self.state {
             AppState::Idle => {},
             AppState::FileDialog(promise) => {
-                if let Some(rom) = promise.ready() {
-                    self.emulator =
-                        Some(Emulator::new_from_buffer(rom.clone(), true, None, None).unwrap());
-                    self.state = AppState::Running;
+                if let Some(rom_file) = promise.ready() {
+                    if let Some(rom) = rom_file {
+                        self.emulator =
+                            Some(Emulator::new_from_buffer(rom.clone(), true, None, None).unwrap());
+                        self.state = AppState::Running;
+                    } else {
+                        self.state = AppState::Idle;
+                    }
                 }
             },
             AppState::Running => {
@@ -145,9 +149,14 @@ impl eframe::App for GbemuApp {
                     if ui.button("Open").clicked() {
                         let ctx_clone = ctx.clone();
                         self.state = AppState::FileDialog(task::execute(async move {
-                            let file = AsyncFileDialog::new().pick_file().await.unwrap();
-                            let result = file.read().await;
+                            let result;
+                            if let Some(file) = AsyncFileDialog::new().pick_file().await {
+                                result = Some(file.read().await);
+                            } else {
+                                result = None;
+                            }
                             ctx_clone.request_repaint();
+
                             result
                         }));
 
