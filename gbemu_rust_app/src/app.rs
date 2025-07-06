@@ -47,7 +47,7 @@ impl Display for AppState {
 }
 
 pub struct GbemuApp {
-    scale: usize,
+    scale: f32,
 
     stats: Stats,
     input_handler: InputHandler,
@@ -64,7 +64,7 @@ impl GbemuApp {
         emulator: Option<Emulator>,
     ) -> Option<Self> {
         Some(Self {
-            scale: 2,
+            scale: 1.0,
             stats: Stats::default(),
             input_handler: InputHandler::default(),
             state: if emulator.is_none() {
@@ -183,15 +183,15 @@ impl eframe::App for GbemuApp {
                 });
 
                 ui.menu_button("View", |ui| {
-                    if ui.button("Zoom in").clicked() {
-                        self.scale += 1;
-                    }
-
                     if ui
-                        .add_enabled(self.scale > 1, egui::Button::new("Zoom out"))
+                        .add_enabled(self.scale < 1.0, egui::Button::new("Zoom in"))
                         .clicked()
                     {
-                        self.scale -= 1;
+                        self.scale += 0.25;
+                    }
+
+                    if ui.button("Zoom out").clicked() {
+                        self.scale -= 0.25;
                     }
                 });
 
@@ -246,11 +246,16 @@ impl eframe::App for GbemuApp {
 
                     self.texture.set(frame, egui::TextureOptions::NEAREST);
 
-                    let size = self.texture.size_vec2();
-                    let sized_texture = egui::load::SizedTexture::new(self.texture.id(), size);
+                    // Use all of the available width or height. The available width needs
+                    // to be subtracted with the height of the top and bottom bars. Their
+                    // default height is `ui.style().spacing.interact_size.y`
+                    let available_size = ui
+                        .available_height()
+                        .min(ui.available_width() - (2.0 * ui.style().spacing.interact_size.y));
+
                     ui.add(
-                        egui::Image::new(sized_texture).fit_to_exact_size(
-                            size * Vec2::new(self.scale as f32, self.scale as f32),
+                        egui::Image::new(&self.texture).fit_to_exact_size(
+                            self.scale * Vec2::new(available_size, available_size),
                         ),
                     );
                 },
