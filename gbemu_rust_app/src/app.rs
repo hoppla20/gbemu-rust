@@ -134,10 +134,6 @@ impl eframe::App for GbemuApp {
 
                 ctx.request_repaint();
             },
-            #[allow(unreachable_patterns)]
-            _ => {
-                panic!("Unknown App State!");
-            },
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
