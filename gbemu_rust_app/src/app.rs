@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 
+mod action;
 mod input;
 mod stats;
 mod task;
@@ -32,6 +33,7 @@ enum AppState {
     Idle,
     FileDialog(Promise<Option<Vec<u8>>>),
     Running,
+    Paused,
 }
 
 impl Display for AppState {
@@ -40,8 +42,7 @@ impl Display for AppState {
             Self::Idle => "Idle",
             Self::FileDialog(_) => "File Dialog",
             Self::Running => "Running",
-            #[allow(unreachable_patterns)]
-            _ => "Unknown",
+            Self::Paused => "Paused",
         })
     }
 }
@@ -114,16 +115,28 @@ impl eframe::App for GbemuApp {
                         egui::Event::Key {
                             key,
                             pressed,
-                            repeat,
+                            repeat: false,
                             modifiers,
                             ..
-                        } => self.input_handler.handle(
-                            self.emulator.as_mut().unwrap(),
-                            key,
-                            pressed,
-                            repeat,
-                            modifiers,
-                        ),
+                        } => {
+                            if let Some(action) = self.input_handler.handle(key, pressed, modifiers)
+                            {
+                                match action {
+                                    action::Action::TogglePause => {
+                                        self.state = AppState::Paused;
+                                    },
+                                    action::Action::KeyEvent { key, pressed } => {
+                                        self.emulator
+                                            .as_mut()
+                                            .unwrap()
+                                            .system
+                                            .io
+                                            .joypad
+                                            .key_event(key, pressed);
+                                    },
+                                }
+                            }
+                        },
                         _ => {},
                     }
                 }
@@ -134,11 +147,31 @@ impl eframe::App for GbemuApp {
 
                 ctx.request_repaint();
             },
+            AppState::Paused => {
+                let events = ctx.input(|i| i.events.clone());
+                for event in &events {
+                    #[allow(clippy::single_match)]
+                    match event {
+                        egui::Event::Key {
+                            key,
+                            pressed,
+                            repeat: false,
+                            modifiers,
+                            ..
+                        } => match self.input_handler.handle(key, pressed, modifiers) {
+                            Some(action::Action::TogglePause) => {
+                                self.state = AppState::Running;
+                            },
+                            _ => {},
+                        },
+                        _ => {},
+                    }
+                }
+            },
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // the top panel is often a good place for a menu bar:
-
             egui::menu::bar(ui, |ui| {
                 // no quit on web pages
                 ui.menu_button("File", |ui| {
@@ -165,9 +198,30 @@ impl eframe::App for GbemuApp {
                         ui.close_menu();
                     }
 
+                    let toggle_pause_label = if matches!(self.state, AppState::Paused) {
+                        "Continue"
+                    } else {
+                        "Pause"
+                    };
                     if ui
                         .add_enabled(
-                            matches!(self.state, AppState::Running),
+                            matches!(self.state, AppState::Running)
+                                || matches!(self.state, AppState::Paused),
+                            egui::Button::new(toggle_pause_label),
+                        )
+                        .clicked()
+                    {
+                        self.state = match self.state {
+                            AppState::Running => AppState::Paused,
+                            AppState::Paused => AppState::Running,
+                            _ => unreachable!(),
+                        }
+                    }
+
+                    if ui
+                        .add_enabled(
+                            matches!(self.state, AppState::Running)
+                                || matches!(self.state, AppState::Paused),
                             egui::Button::new("Stop"),
                         )
                         .clicked()
@@ -217,17 +271,17 @@ impl eframe::App for GbemuApp {
             ui.with_layout(
                 egui::Layout::centered_and_justified(egui::Direction::TopDown),
                 |ui| {
-                    let mut frame_buffer = [[Pixel::Color0; LCD_WIDTH]; LCD_HEIGHT];
-                    if let AppState::Running = self.state {
-                        frame_buffer = self
+                    let frame_buffer = match self.state {
+                        AppState::Running | AppState::Paused => self
                             .emulator
                             .as_ref()
                             .unwrap()
                             .system
                             .graphics
                             .renderer
-                            .get_framebuffer();
-                    }
+                            .get_framebuffer(),
+                        _ => [[Pixel::Color0; LCD_WIDTH]; LCD_HEIGHT],
+                    };
                     let mut frame_data: Vec<egui::Color32> = vec![];
 
                     for y in 0..LCD_HEIGHT {

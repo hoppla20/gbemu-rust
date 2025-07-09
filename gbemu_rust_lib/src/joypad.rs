@@ -1,6 +1,17 @@
 const SELECT_BUTTONS_BIT: usize = 5;
 const SELECT_DIRECTIONS_BIT: usize = 4;
 
+pub enum Key {
+    Down,
+    Up,
+    Left,
+    Right,
+    B,
+    A,
+    Select,
+    Start,
+}
+
 #[derive(Default, Clone, Copy)]
 pub struct JoypadRegister {
     interrupt: bool,
@@ -73,44 +84,18 @@ impl JoypadRegister {
         self.select_directions = ((value >> SELECT_DIRECTIONS_BIT) & 0x01) == 0;
     }
 
-    pub fn start_pressed(&mut self, pressed: bool) {
+    pub fn key_event(&mut self, key: Key, pressed: bool) {
         self.interrupt = true;
-        self.start_pressed = pressed;
-    }
-
-    pub fn select_pressed(&mut self, pressed: bool) {
-        self.interrupt = true;
-        self.select_pressed = pressed;
-    }
-
-    pub fn a_pressed(&mut self, pressed: bool) {
-        self.interrupt = true;
-        self.a_pressed = pressed;
-    }
-
-    pub fn b_pressed(&mut self, pressed: bool) {
-        self.interrupt = true;
-        self.b_pressed = pressed;
-    }
-
-    pub fn down_pressed(&mut self, pressed: bool) {
-        self.interrupt = true;
-        self.down_pressed = pressed;
-    }
-
-    pub fn up_pressed(&mut self, pressed: bool) {
-        self.interrupt = true;
-        self.up_pressed = pressed;
-    }
-
-    pub fn left_pressed(&mut self, pressed: bool) {
-        self.interrupt = true;
-        self.left_pressed = pressed;
-    }
-
-    pub fn right_pressed(&mut self, pressed: bool) {
-        self.interrupt = true;
-        self.right_pressed = pressed;
+        match key {
+            Key::Down => self.down_pressed = pressed,
+            Key::Up => self.up_pressed = pressed,
+            Key::Left => self.left_pressed = pressed,
+            Key::Right => self.right_pressed = pressed,
+            Key::B => self.b_pressed = pressed,
+            Key::A => self.a_pressed = pressed,
+            Key::Select => self.select_pressed = pressed,
+            Key::Start => self.start_pressed = pressed,
+        }
     }
 
     pub fn interrupt(&mut self) -> bool {
