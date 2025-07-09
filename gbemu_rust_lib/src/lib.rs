@@ -25,6 +25,7 @@ pub mod prelude {
     pub use super::system::System;
 
     pub use super::graphics::{LCD_HEIGHT, LCD_WIDTH};
+    pub use super::joypad::Key;
 }
 
 #[cfg(test)]
