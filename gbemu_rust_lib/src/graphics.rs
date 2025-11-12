@@ -202,7 +202,7 @@ impl Ppu {
                         };
 
                         if self.object_buffer.len() < 10
-                            && (self.registers.get_lcd_ly() >= obj.pos_y - 16)
+                            && (self.registers.get_lcd_ly() >= obj.pos_y.overflowing_sub(16).0)
                             && (self.registers.get_lcd_ly() < obj.pos_y + obj_height - 16)
                         {
                             trace!("Found object {:?}", obj);
